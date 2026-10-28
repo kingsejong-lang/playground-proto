@@ -1,0 +1,38 @@
+# Generated code is committed (gen/) so consumers need no buf toolchain.
+# CI runs `make generate` and fails when the working tree changes.
+version: v2
+clean: true
+managed:
+  enabled: true
+  disable:
+    - module: buf.build/bufbuild/protovalidate
+  override:
+    - file_option: go_package_prefix
+      value: github.com/kingsejong-lang/playground-proto/gen/go
+plugins:
+  # Go message types
+  - local: protoc-gen-go
+    out: gen/go
+    opt: paths=source_relative
+  # Connect handlers/clients (gateway edge; may also serve internal services over gRPC)
+  - local: protoc-gen-connect-go
+    out: gen/go
+    opt: paths=source_relative
+  # grpc-go stubs, kept so existing internal services migrate incrementally
+  - local: protoc-gen-go-grpc
+    out: gen/go
+    opt: paths=source_relative
+    types:
+      - playground.svc.v1.AuthInternalService
+      - playground.svc.v1.ExecutionInternalService
+      - playground.svc.v1.StorageInternalService
+      - playground.svc.v1.LanguageInternalService
+  # TypeScript (browser) — only the public API is generated for the frontend.
+  - local: protoc-gen-es
+    out: ts/src/gen
+    include_imports: true
+    opt:
+      - target=ts
+      - import_extension=js
+    types:
+      - playground.api.v1

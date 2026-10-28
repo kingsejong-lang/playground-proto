@@ -1,0 +1,133 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+import "playground/api/v1/common.proto";
+
+// LanguageService describes the languages a visitor can run. It never exposes
+// runtime internals (container images, commands, hosts).
+service LanguageService {
+  rpc ListLanguages(ListLanguagesRequest) returns (ListLanguagesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetLanguage(GetLanguageRequest) returns (GetLanguageResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc ListTemplates(ListTemplatesRequest) returns (ListTemplatesResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc GetTemplate(GetTemplateRequest) returns (GetTemplateResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // FormatCode runs the language formatter (for KingSejong: `kingsejong fmt`) in the sandbox.
+  rpc FormatCode(FormatCodeRequest) returns (FormatCodeResponse);
+}
+
+message Language {
+  // Stable id, e.g. "kingsejong", "python", "go".
+  string id = 1;
+  string display_name = 2;
+  string version = 3;
+  // Extensions including the leading dot, lower case, e.g. [".ksj"].
+  repeated string file_extensions = 4;
+  // File the runner executes when the request does not name one, e.g. "main.ksj".
+  string default_entry_file = 5;
+  repeated Capability capabilities = 6;
+  // Limits that apply to an anonymous visitor; signed-in limits may be higher.
+  ExecutionLimits limits = 7;
+  // Monaco language id used for highlighting, e.g. "kingsejong".
+  string editor_language = 8;
+  // Template loaded into a new, empty editor (GetTemplate id), e.g. "hello_world".
+  string default_template_id = 9;
+
+  enum Capability {
+    CAPABILITY_UNSPECIFIED = 0;
+    CAPABILITY_RUN = 1;
+    CAPABILITY_COMPILE = 2;
+    CAPABILITY_FORMAT = 3;
+    CAPABILITY_STDIN = 4;
+  }
+}
+
+// ExecutionLimits are published so the editor can show them and pre-validate.
+message ExecutionLimits {
+  uint32 max_wall_time_ms = 1;
+  uint32 max_cpu_time_ms = 2;
+  uint64 max_memory_bytes = 3;
+  uint64 max_output_bytes = 4;
+  uint32 max_concurrent_runs = 5;
+  uint32 runs_per_minute = 6;
+}
+
+message ListLanguagesRequest {}
+
+message ListLanguagesResponse {
+  repeated Language languages = 1;
+}
+
+message GetLanguageRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+}
+
+message GetLanguageResponse {
+  Language language = 1;
+}
+
+message Template {
+  string id = 1;
+  string language_id = 2;
+  string title = 3;
+  string description = 4;
+  Files files = 5;
+  string entry_file = 6;
+}
+
+message ListTemplatesRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+}
+
+message ListTemplatesResponse {
+  // Templates without file contents (title/description only); fetch one with GetTemplate.
+  repeated Template templates = 1;
+}
+
+message GetTemplateRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+  string template_id = 2 [(buf.validate.field).string.pattern = "^[a-z0-9][a-z0-9_\\-]{0,63}$"];
+}
+
+message GetTemplateResponse {
+  Template template = 1;
+}
+
+message FormatCodeRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+  SourceFile file = 2 [(buf.validate.field).required = true];
+}
+
+message FormatCodeResponse {
+  // Formatted file; unchanged content when formatting is a no-op.
+  SourceFile file = 1;
+  // Parse errors that prevented formatting.
+  repeated Diagnostic diagnostics = 2;
+}
+
+// Diagnostic is a compiler/parser/formatter message mapped to a source position.
+message Diagnostic {
+  Severity severity = 1;
+  string message = 2;
+  string path = 3;
+  // 1-based; 0 means unknown.
+  uint32 line = 4;
+  uint32 column = 5;
+  // Language-specific code, e.g. KingSejong error kind.
+  string code = 6;
+
+  enum Severity {
+    SEVERITY_UNSPECIFIED = 0;
+    SEVERITY_ERROR = 1;
+    SEVERITY_WARNING = 2;
+    SEVERITY_INFO = 3;
+  }
+}

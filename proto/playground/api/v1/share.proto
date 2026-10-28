@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "playground/api/v1/common.proto";
+
+// ShareService stores code snapshots behind short links.
+// Ownership comes from the session; anonymous creators get a one-time delete token.
+service ShareService {
+  rpc CreateShare(CreateShareRequest) returns (CreateShareResponse);
+  rpc GetShare(GetShareRequest) returns (GetShareResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc DeleteShare(DeleteShareRequest) returns (DeleteShareResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+message Share {
+  // URL-safe id, 12 characters (~71 bits).
+  string id = 1;
+  string language_id = 2;
+  Files files = 3;
+  string entry_file = 4;
+  // Plain text; clients render it as text, never as HTML.
+  string title = 5;
+  string description = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  uint64 view_count = 9;
+  // True when the caller's session owns the share.
+  bool owned_by_caller = 10;
+}
+
+message CreateShareRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+  Files files = 2 [(buf.validate.field).required = true];
+  string entry_file = 3 [(buf.validate.field).string.max_bytes = 128];
+  string title = 4 [(buf.validate.field).string.max_len = 120];
+  string description = 5 [(buf.validate.field).string.max_len = 1000];
+  // 1..90 days; 0 = 30 days.
+  uint32 expires_in_days = 6 [(buf.validate.field).uint32.lte = 90];
+}
+
+message CreateShareResponse {
+  Share share = 1;
+  // Returned once for anonymous shares; present it to DeleteShare. Empty when signed in.
+  // Clients keep it only where the creator can reach it again (e.g. local history
+  // entry for that share); it is a bearer secret and must never be put in a URL.
+  string delete_token = 2;
+}
+
+message GetShareRequest {
+  string id = 1 [(buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-]{8,22}$"];
+}
+
+message GetShareResponse {
+  Share share = 1;
+}
+
+message DeleteShareRequest {
+  string id = 1 [(buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-]{8,22}$"];
+  // Required for anonymous shares; ignored when the session owns the share.
+  string delete_token = 2 [(buf.validate.field).string.max_bytes = 128];
+}
+
+message DeleteShareResponse {}

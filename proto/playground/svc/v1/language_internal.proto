@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package playground.svc.v1;
+
+import "buf/validate/validate.proto";
+import "playground/api/v1/language.proto";
+
+// LanguageInternalService adds runtime specs to the public language catalog.
+// Only the execution service reads RuntimeSpec.
+service LanguageInternalService {
+  rpc ListRuntimes(ListRuntimesRequest) returns (ListRuntimesResponse);
+  rpc ListLanguages(playground.api.v1.ListLanguagesRequest) returns (playground.api.v1.ListLanguagesResponse);
+  rpc GetLanguage(playground.api.v1.GetLanguageRequest) returns (playground.api.v1.GetLanguageResponse);
+  rpc ListTemplates(playground.api.v1.ListTemplatesRequest) returns (playground.api.v1.ListTemplatesResponse);
+  rpc GetTemplate(playground.api.v1.GetTemplateRequest) returns (playground.api.v1.GetTemplateResponse);
+}
+
+message ListRuntimesRequest {}
+
+message ListRuntimesResponse {
+  repeated RuntimeSpec runtimes = 1;
+}
+
+// RuntimeSpec tells the sandbox how to run a language.
+// Commands are argv arrays executed without a shell; "{entry}" is the only
+// placeholder and is substituted with a path that already passed validation.
+message RuntimeSpec {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+  // Image pinned by digest, e.g. "ghcr.io/kingsejong-lang/runtime@sha256:...".
+  string image = 2 [(buf.validate.field).string.pattern = "^[a-z0-9./_\\-:]+@sha256:[a-f0-9]{64}$"];
+  repeated string compile_argv = 3;
+  repeated string run_argv = 4 [(buf.validate.field).repeated.min_items = 1];
+  repeated string format_argv = 5;
+  // Default per-language limits before tier policy is applied.
+  playground.api.v1.ExecutionLimits default_limits = 6;
+  // Container runtime class; "runsc" (gVisor) is required in production.
+  string runtime_class = 7;
+}

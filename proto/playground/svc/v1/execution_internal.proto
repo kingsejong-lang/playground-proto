@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package playground.svc.v1;
+
+import "buf/validate/validate.proto";
+import "playground/api/v1/execution.proto";
+import "playground/api/v1/language.proto";
+import "playground/svc/v1/context.proto";
+
+// ExecutionInternalService runs code for the gateway. It owns the sandbox and
+// is the only component with access to the container runtime.
+service ExecutionInternalService {
+  rpc Run(RunRequest) returns (stream playground.api.v1.RunEvent);
+  rpc Cancel(CancelRequest) returns (playground.api.v1.CancelResponse);
+  rpc GetExecution(GetExecutionRequest) returns (playground.api.v1.GetExecutionResponse);
+  // FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
+  rpc FormatCode(FormatCodeRequest) returns (playground.api.v1.FormatCodeResponse);
+}
+
+message RunRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.RunRequest request = 2 [(buf.validate.field).required = true];
+  // Effective limits computed by the gateway from the principal's tier.
+  ExecutionPolicy policy = 3 [(buf.validate.field).required = true];
+}
+
+// ExecutionPolicy is enforced by the sandbox, not by the language runtime.
+message ExecutionPolicy {
+  uint32 wall_time_ms = 1 [(buf.validate.field).uint32 = {
+    gte: 100
+    lte: 120000
+  }];
+  uint32 cpu_time_ms = 2 [(buf.validate.field).uint32 = {
+    gte: 100
+    lte: 120000
+  }];
+  uint64 memory_bytes = 3 [(buf.validate.field).uint64 = {
+    gte: 16777216
+    lte: 2147483648
+  }];
+  uint64 max_output_bytes = 4 [(buf.validate.field).uint64.lte = 16777216];
+  uint32 max_processes = 5 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 256
+  }];
+  uint64 max_file_bytes = 6 [(buf.validate.field).uint64.lte = 104857600];
+  // Network is always off for untrusted tiers; reserved for future trusted use.
+  bool network = 7 [(buf.validate.field).bool.const = false];
+}
+
+message CancelRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.CancelRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message GetExecutionRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.GetExecutionRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message FormatCodeRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.FormatCodeRequest request = 2 [(buf.validate.field).required = true];
+  ExecutionPolicy policy = 3 [(buf.validate.field).required = true];
+}

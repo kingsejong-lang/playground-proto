@@ -1,0 +1,100 @@
+syntax = "proto3";
+
+package playground.svc.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "playground/api/v1/auth.proto";
+import "playground/svc/v1/context.proto";
+
+// AuthInternalService is called only by the gateway. It returns raw tokens to
+// the gateway, which converts them into cookies; tokens never reach browser JS.
+service AuthInternalService {
+  rpc Register(RegisterRequest) returns (SessionTokens);
+  rpc Login(LoginRequest) returns (SessionTokens);
+  rpc Refresh(RefreshRequest) returns (SessionTokens);
+  rpc Revoke(RevokeRequest) returns (RevokeResponse);
+  // VerifyAccessToken is the gateway's per-request session check.
+  rpc VerifyAccessToken(VerifyAccessTokenRequest) returns (VerifyAccessTokenResponse);
+  rpc CreateApiKey(CreateApiKeyRequest) returns (CreateApiKeyResponse);
+  rpc ValidateApiKey(ValidateApiKeyRequest) returns (ValidateApiKeyResponse);
+  rpc RevokeApiKey(RevokeApiKeyRequest) returns (RevokeApiKeyResponse);
+}
+
+message RegisterRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.RegisterRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message LoginRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.LoginRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message RefreshRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  string refresh_token = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+message SessionTokens {
+  playground.api.v1.User user = 1;
+  string access_token = 2;
+  google.protobuf.Timestamp access_expires_at = 3;
+  string refresh_token = 4;
+  google.protobuf.Timestamp refresh_expires_at = 5;
+  string session_id = 6;
+}
+
+message RevokeRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  string session_id = 2;
+}
+
+message RevokeResponse {}
+
+message VerifyAccessTokenRequest {
+  string access_token = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message VerifyAccessTokenResponse {
+  Principal principal = 1;
+  google.protobuf.Timestamp expires_at = 2;
+  // Profile of the user for USER principals (GetSession); unset otherwise.
+  playground.api.v1.User user = 3;
+}
+
+// API keys are created for the principal in context, never for an arbitrary user id.
+message CreateApiKeyRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  string name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 64
+  ];
+  repeated string scopes = 3 [(buf.validate.field).repeated.max_items = 8];
+  uint32 expires_in_days = 4 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 365
+  }];
+}
+
+message CreateApiKeyResponse {
+  string api_key_id = 1;
+  // Shown once; only a hash is stored.
+  string api_key = 2;
+  google.protobuf.Timestamp expires_at = 3;
+}
+
+message ValidateApiKeyRequest {
+  string api_key = 1 [(buf.validate.field).string.min_len = 1];
+}
+
+message ValidateApiKeyResponse {
+  Principal principal = 1;
+}
+
+message RevokeApiKeyRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  string api_key_id = 2 [(buf.validate.field).string.min_len = 1];
+}
+
+message RevokeApiKeyResponse {}

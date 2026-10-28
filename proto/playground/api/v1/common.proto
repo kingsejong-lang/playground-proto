@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+
+// SourceFile is one file of a multi-file program.
+//
+// Paths are relative, use a small safe alphabet, and may not escape the
+// workspace. The same rules run in the browser (protovalidate-es) for instant
+// feedback and at the gateway (protovalidate-go) as the authoritative check.
+message SourceFile {
+  // Relative path such as "main.ksj" or "lib/util.ksj". At most 4 directory levels.
+  string path = 1 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_bytes = 128,
+    (buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-][A-Za-z0-9_\\-.]*(/[A-Za-z0-9_\\-][A-Za-z0-9_\\-.]*){0,4}$",
+    (buf.validate.field).cel = {
+      id: "source_file.path.no_dot_segments"
+      message: "path must not contain '.' or '..' segments"
+      expression: "!this.split('/').exists(s, s == '.' || s == '..')"
+    }
+  ];
+  // UTF-8 source text, at most 64 KiB per file.
+  string content = 2 [(buf.validate.field).string.max_bytes = 65536];
+}
+
+// Files is a bounded, uniquely named set of source files.
+message Files {
+  repeated SourceFile files = 1 [
+    (buf.validate.field).repeated.min_items = 1,
+    (buf.validate.field).repeated.max_items = 16
+  ];
+
+  option (buf.validate.message).cel = {
+    id: "files.unique_paths"
+    message: "file paths must be unique"
+    expression: "this.files.map(f, f.path).unique()"
+  };
+  // Total size (<= 256 KiB) cannot be expressed in CEL (no sum); it is enforced
+  // by the edge read limit (connecthttp.WithReadMaxBytes) and by
+  // playground-proto/go/limits.CheckFiles in the gateway.
+}
+
+// Theme preference for the editor and the page.
+enum Theme {
+  THEME_UNSPECIFIED = 0;
+  THEME_SYSTEM = 1;
+  THEME_LIGHT = 2;
+  THEME_DARK = 3;
+}
+
+// ErrorReason is attached to every non-OK response as a Connect error detail so
+// clients can branch on a stable code instead of parsing messages. Messages
+// returned to clients never contain internal error text.
+message ErrorDetail {
+  Reason reason = 1;
+  // Field path for validation errors, e.g. "files.files[2].path".
+  string field = 2;
+  // Seconds the client should wait before retrying (rate limit / overload).
+  uint32 retry_after_seconds = 3;
+
+  enum Reason {
+    REASON_UNSPECIFIED = 0;
+    REASON_VALIDATION = 1;
+    REASON_UNAUTHENTICATED = 2;
+    REASON_FORBIDDEN = 3;
+    REASON_NOT_FOUND = 4;
+    REASON_RATE_LIMITED = 5;
+    REASON_CONCURRENCY_LIMIT = 6;
+    REASON_OVERLOADED = 7;
+    REASON_LANGUAGE_UNAVAILABLE = 8;
+    REASON_PAYLOAD_TOO_LARGE = 9;
+    REASON_ORIGIN_REJECTED = 10;
+    REASON_INTERNAL = 11;
+  }
+}
