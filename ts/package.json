@@ -1,0 +1,42 @@
+{
+  "name": "@kingsejong-lang/playground-proto",
+  "version": "0.3.0",
+  "description": "Generated TypeScript types and service descriptors for the KingSejong Playground public API (playground.api.v1).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=24.11"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./limits": {
+      "types": "./dist/limits.d.ts",
+      "default": "./dist/limits.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@bufbuild/protobuf": "^2.16.0"
+  },
+  "devDependencies": {
+    "@bufbuild/protobuf": "2.16.0",
+    "@bufbuild/protovalidate": "1.3.0",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kingsejong-lang/playground-proto.git",
+    "directory": "ts"
+  }
+}
