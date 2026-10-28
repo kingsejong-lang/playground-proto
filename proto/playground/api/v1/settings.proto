@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/field_mask.proto";
+import "playground/api/v1/common.proto";
+
+// SettingsService stores preferences of the signed-in user (UNAUTHENTICATED otherwise).
+service SettingsService {
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse) {
+    option idempotency_level = IDEMPOTENT;
+  }
+}
+
+message Settings {
+  uint32 font_size = 1 [(buf.validate.field).uint32 = {
+    gte: 10
+    lte: 32
+  }];
+  uint32 tab_size = 2 [(buf.validate.field).uint32 = {
+    gte: 1
+    lte: 8
+  }];
+  // CSS font-family stack chosen from a server-side allow list.
+  string font_family = 3 [(buf.validate.field).string.pattern = "^[A-Za-z0-9 ,\\-'\"]{0,96}$"];
+  bool minimap = 4;
+  bool word_wrap = 5;
+  bool auto_save = 6;
+  Theme theme = 7 [(buf.validate.field).enum.defined_only = true];
+  // BCP 47 subset supported by the UI.
+  string locale = 8 [(buf.validate.field).string = {
+    in: [
+      "",
+      "ko",
+      "en"
+    ]
+  }];
+}
+
+message GetSettingsRequest {}
+
+message GetSettingsResponse {
+  Settings settings = 1;
+}
+
+message UpdateSettingsRequest {
+  Settings settings = 1 [(buf.validate.field).required = true];
+  // Fields to update; empty means all fields.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+message UpdateSettingsResponse {
+  Settings settings = 1;
+}

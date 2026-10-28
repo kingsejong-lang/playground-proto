@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package playground.svc.v1;
+
+import "buf/validate/validate.proto";
+import "playground/api/v1/settings.proto";
+import "playground/api/v1/share.proto";
+import "playground/svc/v1/context.proto";
+
+// StorageInternalService persists shares and settings. Owner checks happen here
+// using CallContext.principal, so a compromised or buggy edge handler cannot
+// delete another user's data by passing an id.
+service StorageInternalService {
+  rpc CreateShare(CreateShareRequest) returns (playground.api.v1.CreateShareResponse);
+  rpc GetShare(GetShareRequest) returns (playground.api.v1.GetShareResponse);
+  rpc DeleteShare(DeleteShareRequest) returns (playground.api.v1.DeleteShareResponse);
+  rpc GetSettings(GetSettingsRequest) returns (playground.api.v1.GetSettingsResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (playground.api.v1.UpdateSettingsResponse);
+}
+
+message CreateShareRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.CreateShareRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message GetShareRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.GetShareRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message DeleteShareRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.DeleteShareRequest request = 2 [(buf.validate.field).required = true];
+}
+
+message GetSettingsRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+}
+
+message UpdateSettingsRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.UpdateSettingsRequest request = 2 [(buf.validate.field).required = true];
+}

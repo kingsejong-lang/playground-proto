@@ -1,0 +1,86 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+
+// AuthService manages the browser session.
+//
+// Tokens are never placed in message bodies: the gateway sets and clears
+// HttpOnly, Secure, SameSite=Strict cookies on the response. Browser code
+// cannot read them, so XSS cannot exfiltrate them.
+service AuthService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  // RefreshSession rotates the refresh cookie (one-time use; reuse revokes the family).
+  rpc RefreshSession(RefreshSessionRequest) returns (RefreshSessionResponse);
+  rpc GetSession(GetSessionRequest) returns (GetSessionResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message User {
+  string id = 1;
+  string email = 2;
+  string display_name = 3;
+}
+
+message RegisterRequest {
+  string email = 1 [
+    (buf.validate.field).string.email = true,
+    (buf.validate.field).string.max_bytes = 254
+  ];
+  string password = 2 [
+    (buf.validate.field).string.min_len = 10,
+    (buf.validate.field).string.max_bytes = 128
+  ];
+  string display_name = 3 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 50
+  ];
+}
+
+message RegisterResponse {
+  User user = 1;
+}
+
+message LoginRequest {
+  string email = 1 [
+    (buf.validate.field).string.email = true,
+    (buf.validate.field).string.max_bytes = 254
+  ];
+  string password = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_bytes = 128
+  ];
+}
+
+message LoginResponse {
+  User user = 1;
+}
+
+message LogoutRequest {}
+
+message LogoutResponse {}
+
+message RefreshSessionRequest {}
+
+message RefreshSessionResponse {
+  User user = 1;
+}
+
+message GetSessionRequest {}
+
+message GetSessionResponse {
+  // Unset for anonymous visitors.
+  User user = 1;
+  // Limits in force for this session (anonymous or signed-in tier).
+  ExecutionQuota quota = 2;
+}
+
+message ExecutionQuota {
+  uint32 max_concurrent_runs = 1;
+  uint32 runs_per_minute = 2;
+  uint32 remaining_this_minute = 3;
+}

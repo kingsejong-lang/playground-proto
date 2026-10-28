@@ -1,0 +1,167 @@
+syntax = "proto3";
+
+package playground.api.v1;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/timestamp.proto";
+import "playground/api/v1/common.proto";
+import "playground/api/v1/language.proto";
+
+// ExecutionService runs untrusted code in an isolated sandbox.
+//
+// Run is the only way to start code. It is server-streaming so output arrives
+// as it is produced; closing the stream (aborting the fetch) cancels the run.
+// Identity, quotas and limits are decided by the gateway from the session; no
+// field in these messages can raise a limit or name another user.
+service ExecutionService {
+  rpc Run(RunRequest) returns (stream RunEvent);
+  // Cancel stops a run owned by the caller (e.g. from another tab).
+  rpc Cancel(CancelRequest) returns (CancelResponse);
+  // GetExecution returns status and metrics of a run owned by the caller, for
+  // reconnecting after a dropped stream. Output is not replayed (v1 decision:
+  // keeps the execution service stateless about output; clients show a notice
+  // that output after the drop is unavailable).
+  rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+}
+
+message RunRequest {
+  string language_id = 1 [(buf.validate.field).string.pattern = "^[a-z][a-z0-9_]{0,31}$"];
+  Files files = 2 [(buf.validate.field).required = true];
+  // Entry file path; defaults to Language.default_entry_file.
+  string entry_file = 3 [(buf.validate.field).string.max_bytes = 128];
+  // Standard input delivered to the program, at most 64 KiB.
+  bytes stdin = 4 [(buf.validate.field).bytes.max_len = 65536];
+  // Program arguments, passed as argv (never through a shell).
+  repeated string args = 5 [
+    (buf.validate.field).repeated.max_items = 16,
+    (buf.validate.field).repeated.items.string.max_bytes = 256
+  ];
+  // Requested wall-clock limit. The server uses min(requested, policy); 0 = policy default.
+  uint32 wall_time_limit_ms = 6 [(buf.validate.field).uint32.lte = 60000];
+  // Client-generated idempotency key; a repeated key within 60 s returns the
+  // existing run instead of starting a second one.
+  string client_request_id = 7 [(buf.validate.field).string.pattern = "^$|^[A-Za-z0-9_\\-]{8,64}$"];
+
+  option (buf.validate.message).cel = {
+    id: "run_request.entry_file_exists"
+    message: "entry_file must be one of the submitted files"
+    expression: "this.entry_file == '' || this.files.files.exists(f, f.path == this.entry_file)"
+  };
+}
+
+// RunEvent is one message of the Run stream. Order: accepted -> (queued)* ->
+// started -> (output | diagnostic | truncated | heartbeat)* -> finished.
+// Exactly one finished event ends every stream that was accepted.
+message RunEvent {
+  // Monotonic per stream, starting at 1; lets the client detect gaps.
+  uint64 seq = 1;
+  google.protobuf.Timestamp time = 2;
+
+  oneof event {
+    Accepted accepted = 10;
+    Queued queued = 11;
+    Started started = 12;
+    Output output = 13;
+    Diagnostic diagnostic = 14;
+    Truncated truncated = 15;
+    Heartbeat heartbeat = 16;
+    Finished finished = 17;
+  }
+
+  message Accepted {
+    // Opaque, unguessable id (>=128 bits) bound to the caller.
+    string execution_id = 1;
+    // Limits actually applied to this run.
+    ExecutionLimits limits = 2;
+  }
+  message Queued {
+    uint32 position = 1;
+  }
+  message Started {
+    // COMPILE when the language has a build step, then RUN.
+    Phase phase = 1;
+  }
+  message Output {
+    Stream stream = 1;
+    // Raw bytes; may split UTF-8 sequences, the client must decode incrementally.
+    bytes data = 2;
+  }
+  message Truncated {
+    Stream stream = 1;
+    // Bytes dropped after max_output_bytes was reached.
+    uint64 dropped_bytes = 2;
+  }
+  // Sent every 10 s without output so proxies keep the stream open.
+  message Heartbeat {}
+  message Finished {
+    ExecutionStatus status = 1;
+    // Process exit code when the program ran to completion; unset otherwise.
+    optional int32 exit_code = 2;
+    ExecutionMetrics metrics = 3;
+    // Human-readable, safe-to-display reason for non-success statuses.
+    string message = 4;
+  }
+
+  enum Stream {
+    STREAM_UNSPECIFIED = 0;
+    STREAM_STDOUT = 1;
+    STREAM_STDERR = 2;
+  }
+  enum Phase {
+    PHASE_UNSPECIFIED = 0;
+    PHASE_COMPILE = 1;
+    PHASE_RUN = 2;
+  }
+}
+
+enum ExecutionStatus {
+  EXECUTION_STATUS_UNSPECIFIED = 0;
+  EXECUTION_STATUS_QUEUED = 1;
+  EXECUTION_STATUS_RUNNING = 2;
+  // Exit code 0.
+  EXECUTION_STATUS_SUCCEEDED = 3;
+  // Program ran and exited non-zero (includes KingSejong runtime errors).
+  EXECUTION_STATUS_FAILED = 4;
+  // Parse/compile step failed; see Diagnostic events.
+  EXECUTION_STATUS_COMPILE_ERROR = 5;
+  EXECUTION_STATUS_TIME_LIMIT_EXCEEDED = 6;
+  EXECUTION_STATUS_MEMORY_LIMIT_EXCEEDED = 7;
+  EXECUTION_STATUS_OUTPUT_LIMIT_EXCEEDED = 8;
+  EXECUTION_STATUS_CANCELLED = 9;
+  // Sandbox could not run the program (infrastructure fault); safe to retry.
+  EXECUTION_STATUS_INTERNAL_ERROR = 10;
+}
+
+message ExecutionMetrics {
+  uint32 wall_time_ms = 1;
+  uint32 cpu_time_ms = 2;
+  uint64 peak_memory_bytes = 3;
+  uint64 stdout_bytes = 4;
+  uint64 stderr_bytes = 5;
+  uint32 queue_time_ms = 6;
+}
+
+message CancelRequest {
+  string execution_id = 1 [(buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-]{22,64}$"];
+}
+
+message CancelResponse {
+  // False when the run had already finished.
+  bool cancelled = 1;
+}
+
+message GetExecutionRequest {
+  string execution_id = 1 [(buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-]{22,64}$"];
+}
+
+message GetExecutionResponse {
+  string execution_id = 1;
+  string language_id = 2;
+  ExecutionStatus status = 3;
+  optional int32 exit_code = 4;
+  ExecutionMetrics metrics = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp finished_at = 7;
+}

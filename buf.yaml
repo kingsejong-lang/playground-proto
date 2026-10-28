@@ -1,0 +1,20 @@
+# Buf workspace for the KingSejong Playground contract.
+# Public (browser-facing) API lives in playground.api.v1; service-to-service API in
+# playground.svc.v1. The two packages are deliberately separate: nothing in
+# playground.internal.* may ever be mounted on the public edge (see docs/SECURITY_PROTOCOL.md).
+version: v2
+modules:
+  - path: proto
+    name: buf.build/kingsejong-lang/playground
+deps:
+  - buf.build/bufbuild/protovalidate
+lint:
+  use:
+    - STANDARD
+  except:
+    # Server-streaming Run returns RunEvent, not RunResponse: one event type per stream is clearer.
+    - RPC_RESPONSE_STANDARD_NAME
+    - RPC_REQUEST_RESPONSE_UNIQUE
+breaking:
+  use:
+    - FILE

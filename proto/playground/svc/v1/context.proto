@@ -1,0 +1,42 @@
+syntax = "proto3";
+
+package playground.svc.v1;
+
+import "buf/validate/validate.proto";
+
+// CallContext is built by the gateway from the authenticated session and the
+// connection. Internal services trust it only because the caller authenticated
+// with an mTLS certificate whose identity is "gateway"; they must reject calls
+// from any other peer. Browser input can never populate it.
+message CallContext {
+  Principal principal = 1 [(buf.validate.field).required = true];
+  // Gateway-generated request id (ULID), propagated to logs and traces.
+  string request_id = 2 [(buf.validate.field).string.min_len = 1];
+  // Client IP after trusted-proxy resolution; used for anonymous quotas and audit.
+  string client_ip = 3;
+}
+
+message Principal {
+  Kind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // User id for USER/API_KEY; anonymous visitor id (signed cookie) for ANONYMOUS.
+  string subject_id = 2 [(buf.validate.field).string.min_len = 1];
+  repeated string roles = 3;
+  Tier tier = 4 [(buf.validate.field).enum.defined_only = true];
+  string session_id = 5;
+
+  enum Kind {
+    KIND_UNSPECIFIED = 0;
+    KIND_ANONYMOUS = 1;
+    KIND_USER = 2;
+    KIND_API_KEY = 3;
+  }
+  enum Tier {
+    TIER_UNSPECIFIED = 0;
+    TIER_ANONYMOUS = 1;
+    TIER_USER = 2;
+    TIER_TRUSTED = 3;
+  }
+}

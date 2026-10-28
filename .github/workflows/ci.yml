@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+env:
+  BUF_VERSION: 1.75.0
+  PROTOC_GEN_GO_VERSION: v1.36.12
+  PROTOC_GEN_GO_GRPC_VERSION: v1.6.2
+  PROTOC_GEN_CONNECT_GO_VERSION: v2.0.2
+
+jobs:
+  contract:
+    name: Lint, compatibility and generated code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Install code generators
+        run: |
+          npm install -g @bufbuild/buf@${BUF_VERSION}
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@${PROTOC_GEN_GO_VERSION}
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@${PROTOC_GEN_GO_GRPC_VERSION}
+          go install connectrpc.com/connect/v2/cmd/protoc-gen-connect-go@${PROTOC_GEN_CONNECT_GO_VERSION}
+          (cd ts && npm ci)
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+          echo "$PWD/ts/node_modules/.bin" >> "$GITHUB_PATH"
+      - name: Lint and format
+        run: |
+          buf lint
+          buf format --diff --exit-code
+      - name: Breaking changes against main
+        if: github.event_name == 'pull_request'
+        run: |
+          if git cat-file -e "origin/${{ github.base_ref }}:buf.yaml" 2>/dev/null; then
+            buf breaking --against ".git#branch=origin/${{ github.base_ref }}"
+          else
+            echo "Base branch has no buf module yet; nothing to compare."
+          fi
+      - name: Generated code is up to date
+        run: |
+          buf generate
+          go mod tidy
+          git diff --exit-code -- gen ts/src/gen go.mod go.sum
+
+  test:
+    name: Go and TypeScript tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Go
+        run: |
+          go vet ./...
+          go test -race ./...
+      - name: TypeScript package
+        working-directory: ts
+        run: |
+          npm ci
+          npm run build
+          npm test
+          npm pack --dry-run

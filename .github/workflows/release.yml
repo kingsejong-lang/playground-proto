@@ -1,0 +1,44 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes:
+#   - the Go module (the tag itself; proxy.golang.org picks it up)
+#   - the npm package tarball as a GitHub release asset, installable with
+#     npm install https://github.com/kingsejong-lang/playground-proto/releases/download/vX.Y.Z/kingsejong-lang-playground-proto-X.Y.Z.tgz
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+      - name: Check tag matches package version
+        run: |
+          want="${GITHUB_REF_NAME#v}"
+          have="$(node -p "require('./ts/package.json').version")"
+          test "$want" = "$have" || { echo "tag $want != ts/package.json $have"; exit 1; }
+      - name: Test
+        run: go test ./...
+      - name: Build npm package
+        working-directory: ts
+        run: |
+          npm ci
+          npm run build
+          npm test
+          npm pack
+      - name: Publish release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ts/kingsejong-lang-playground-proto-*.tgz
+          body_path: CHANGELOG.md
