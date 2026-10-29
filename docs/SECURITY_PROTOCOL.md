@@ -51,9 +51,9 @@ Every public request passes these layers in order. A layer rejects with the list
 | L2 Origin & CSRF | Origin allow-list middleware + `WithRequireConnectProtocolHeader()` + content-type `application/proto` only; HTTP GET disabled | Missing/unknown `Origin` on a cookie-bearing request ⇒ reject. The required `Connect-Protocol-Version` header and non-simple content type force a CORS preflight, which the allow-list blocks cross-site. Cookies are `SameSite=Strict`. No CSRF token endpoint is needed. | `PermissionDenied` / `ORIGIN_REJECTED` |
 | L3 Recovery | outermost interceptor | panics → `Internal`, logged with request id; process keeps serving | `Internal` |
 | L4 Identity | session interceptor | `__Host-pg_at` cookie verified via `AuthInternalService.VerifyAccessToken` (cached 30 s). No cookie ⇒ anonymous principal from signed `__Host-pg_anon` cookie (issued on first call). Identity is **never** read from message fields. | `Unauthenticated` |
-| L5 Rate & concurrency | token buckets in Redis keyed by principal **and** by client IP /64 (IPv6) or /32 | anonymous: 10 runs/min, 1 concurrent run, 60 other calls/min; user: 30 runs/min, 2 concurrent; auth RPCs: 5/min/IP. Redis unavailable ⇒ **fail closed** for `Run`, fail open (local bucket) for read-only RPCs | `ResourceExhausted` / `RATE_LIMITED`, `CONCURRENCY_LIMIT` (+ `retry_after_seconds`) |
+| L5 Rate & concurrency | token buckets in Redis keyed by principal **and** by client IP /64 (IPv6) or /32 | anonymous: 10 runs/min, 1 concurrent run (a run counts until `Finished`, also after its stream dropped), 60 other calls/min; user: 30 runs/min, 2 concurrent; auth RPCs: 5/min/IP. Redis unavailable ⇒ **fail closed** for `Run`, fail open (local bucket) for read-only RPCs | `ResourceExhausted` / `RATE_LIMITED`, `CONCURRENCY_LIMIT` (+ `retry_after_seconds`) |
 | L6 Validation | `connectrpc.com/validate` server interceptor (protovalidate rules in these protos) + `go/limits.CheckFiles` | field rules in `proto/playground/api/v1/*.proto`; total source ≤ 256 KiB | `InvalidArgument` / `VALIDATION` (+ `field`) |
-| L7 Admission | bounded global run queue in execution service | queue ≤ 2 × worker count; full ⇒ reject immediately (no unbounded waiting). Per-stream: max duration = policy wall time + 45 s (up to 30 s queue wait after `Accepted` + 15 s slack), output capped at `max_output_bytes`, heartbeat every 10 s, server closes idle streams after 30 s without client read progress | `Unavailable` / `OVERLOADED` |
+| L7 Admission | bounded global run queue in execution service | queue ≤ 2 × worker count; full ⇒ reject immediately (no unbounded waiting). Per-stream: max duration = policy wall time + 45 s (up to 30 s queue wait after `Accepted` + 15 s slack), output capped at `max_output_bytes`, heartbeat every 10 s, server closes idle streams after 30 s without client read progress. Closing a stream after `Accepted` ends only the stream; the run stays bounded by its wall-time limit and stops early only on `Cancel` | `Unavailable` / `OVERLOADED` |
 | L8 Authorization | in the owning service, using `CallContext.principal` | share delete/settings/cancel/get-execution/resume-run require owner match; anonymous share delete requires a constant-time-compared delete token | `PermissionDenied` / `NOT_FOUND` (do not reveal existence) |
 | L9 Sandbox | see §5 | — | reported as `ExecutionStatus` in `Finished`, not as RPC errors |
 
@@ -128,8 +128,8 @@ boundary is authoritative.
 
 ## 6. Abuse and availability
 
-* Gateway and services are stateless except the Redis buckets; losing a gateway pod drops streams,
-  and clients reconnect with `GetExecution`.
+* Gateway and services are stateless except the Redis buckets and replay buffers; losing a gateway pod
+  drops streams but not the runs behind them, and clients reattach with `ResumeRun`.
 * Execution workers are sized by `EXECUTION_WORKERS`; L7 rejects instead of queueing without bound,
   so a flood degrades to fast `OVERLOADED` errors and never to OOM.
 * Each component exports `rejections_total{layer,reason}`; alert when L5/L7 rejections exceed 5 % of
