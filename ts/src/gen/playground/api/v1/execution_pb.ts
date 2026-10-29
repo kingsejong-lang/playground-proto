@@ -641,7 +641,9 @@ export const ExecutionStatusSchema: GenEnum<ExecutionStatus> = /*@__PURE__*/
  * ExecutionService runs untrusted code in an isolated sandbox.
  *
  * Run is the only way to start code. It is server-streaming so output arrives
- * as it is produced; closing the stream (aborting the fetch) cancels the run.
+ * as it is produced. After the Accepted event a run outlives its stream:
+ * closing the stream does not stop it; clients stop a run with Cancel and
+ * reattach to its output with ResumeRun.
  * Identity, quotas and limits are decided by the gateway from the session; no
  * field in these messages can raise a limit or name another user.
  *
@@ -657,7 +659,8 @@ export const ExecutionService: GenService<{
     output: typeof RunEventSchema;
   },
   /**
-   * Cancel stops a run owned by the caller (e.g. from another tab).
+   * Cancel stops a run owned by the caller. This is how a client's Stop works,
+   * because closing the Run stream no longer stops the run.
    *
    * @generated from rpc playground.api.v1.ExecutionService.Cancel
    */

@@ -71,7 +71,8 @@ var (
 // ExecutionServiceClient is a client for the playground.api.v1.ExecutionService service.
 type ExecutionServiceClient interface {
 	Run(context.Context, *v1.RunRequest) (ExecutionServiceRunClientStream, error)
-	// Cancel stops a run owned by the caller (e.g. from another tab).
+	// Cancel stops a run owned by the caller. This is how a client's Stop works,
+	// because closing the Run stream no longer stops the run.
 	Cancel(context.Context, *v1.CancelRequest) (*v1.CancelResponse, error)
 	// GetExecution returns status and metrics of a run owned by the caller, for
 	// a quick status check. Use ResumeRun to receive the output again.
@@ -135,7 +136,8 @@ func (s ExecutionServiceResumeRunClientStream) Close() error {
 // ExecutionServiceHandler is an implementation of the playground.api.v1.ExecutionService service.
 type ExecutionServiceHandler interface {
 	Run(context.Context, *v1.RunRequest, ExecutionServiceRunServerStream) error
-	// Cancel stops a run owned by the caller (e.g. from another tab).
+	// Cancel stops a run owned by the caller. This is how a client's Stop works,
+	// because closing the Run stream no longer stops the run.
 	Cancel(context.Context, *v1.CancelRequest) (*v1.CancelResponse, error)
 	// GetExecution returns status and metrics of a run owned by the caller, for
 	// a quick status check. Use ResumeRun to receive the output again.

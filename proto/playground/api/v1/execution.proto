@@ -10,12 +10,15 @@ import "playground/api/v1/language.proto";
 // ExecutionService runs untrusted code in an isolated sandbox.
 //
 // Run is the only way to start code. It is server-streaming so output arrives
-// as it is produced; closing the stream (aborting the fetch) cancels the run.
+// as it is produced. After the Accepted event a run outlives its stream:
+// closing the stream does not stop it; clients stop a run with Cancel and
+// reattach to its output with ResumeRun.
 // Identity, quotas and limits are decided by the gateway from the session; no
 // field in these messages can raise a limit or name another user.
 service ExecutionService {
   rpc Run(RunRequest) returns (stream RunEvent);
-  // Cancel stops a run owned by the caller (e.g. from another tab).
+  // Cancel stops a run owned by the caller. This is how a client's Stop works,
+  // because closing the Run stream no longer stops the run.
   rpc Cancel(CancelRequest) returns (CancelResponse);
   // GetExecution returns status and metrics of a run owned by the caller, for
   // a quick status check. Use ResumeRun to receive the output again.
