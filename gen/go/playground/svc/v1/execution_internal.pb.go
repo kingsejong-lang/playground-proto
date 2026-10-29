@@ -342,6 +342,58 @@ func (x *FormatCodeRequest) GetPolicy() *ExecutionPolicy {
 	return nil
 }
 
+type ResumeRunRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Context       *CallContext           `protobuf:"bytes,1,opt,name=context,proto3" json:"context,omitempty"`
+	Request       *v1.ResumeRunRequest   `protobuf:"bytes,2,opt,name=request,proto3" json:"request,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeRunRequest) Reset() {
+	*x = ResumeRunRequest{}
+	mi := &file_playground_svc_v1_execution_internal_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeRunRequest) ProtoMessage() {}
+
+func (x *ResumeRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_playground_svc_v1_execution_internal_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeRunRequest.ProtoReflect.Descriptor instead.
+func (*ResumeRunRequest) Descriptor() ([]byte, []int) {
+	return file_playground_svc_v1_execution_internal_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ResumeRunRequest) GetContext() *CallContext {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *ResumeRunRequest) GetRequest() *v1.ResumeRunRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
 var File_playground_svc_v1_execution_internal_proto protoreflect.FileDescriptor
 
 const file_playground_svc_v1_execution_internal_proto_rawDesc = "" +
@@ -373,11 +425,15 @@ const file_playground_svc_v1_execution_internal_proto_rawDesc = "" +
 	"\x11FormatCodeRequest\x12@\n" +
 	"\acontext\x18\x01 \x01(\v2\x1e.playground.svc.v1.CallContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12F\n" +
 	"\arequest\x18\x02 \x01(\v2$.playground.api.v1.FormatCodeRequestB\x06\xbaH\x03\xc8\x01\x01R\arequest\x12B\n" +
-	"\x06policy\x18\x03 \x01(\v2\".playground.svc.v1.ExecutionPolicyB\x06\xbaH\x03\xc8\x01\x01R\x06policy2\xea\x02\n" +
+	"\x06policy\x18\x03 \x01(\v2\".playground.svc.v1.ExecutionPolicyB\x06\xbaH\x03\xc8\x01\x01R\x06policy\"\x9b\x01\n" +
+	"\x10ResumeRunRequest\x12@\n" +
+	"\acontext\x18\x01 \x01(\v2\x1e.playground.svc.v1.CallContextB\x06\xbaH\x03\xc8\x01\x01R\acontext\x12E\n" +
+	"\arequest\x18\x02 \x01(\v2#.playground.api.v1.ResumeRunRequestB\x06\xbaH\x03\xc8\x01\x01R\arequest2\xbb\x03\n" +
 	"\x18ExecutionInternalService\x12C\n" +
 	"\x03Run\x12\x1d.playground.svc.v1.RunRequest\x1a\x1b.playground.api.v1.RunEvent0\x01\x12M\n" +
 	"\x06Cancel\x12 .playground.svc.v1.CancelRequest\x1a!.playground.api.v1.CancelResponse\x12_\n" +
-	"\fGetExecution\x12&.playground.svc.v1.GetExecutionRequest\x1a'.playground.api.v1.GetExecutionResponse\x12Y\n" +
+	"\fGetExecution\x12&.playground.svc.v1.GetExecutionRequest\x1a'.playground.api.v1.GetExecutionResponse\x12O\n" +
+	"\tResumeRun\x12#.playground.svc.v1.ResumeRunRequest\x1a\x1b.playground.api.v1.RunEvent0\x01\x12Y\n" +
 	"\n" +
 	"FormatCode\x12$.playground.svc.v1.FormatCodeRequest\x1a%.playground.api.v1.FormatCodeResponseB\xe1\x01\n" +
 	"\x15com.playground.svc.v1B\x16ExecutionInternalProtoP\x01ZJgithub.com/kingsejong-lang/playground-proto/gen/go/playground/svc/v1;svcv1\xa2\x02\x03PSX\xaa\x02\x11Playground.Svc.V1\xca\x02\x11Playground\\Svc\\V1\xe2\x02\x1dPlayground\\Svc\\V1\\GPBMetadata\xea\x02\x13Playground::Svc::V1b\x06proto3"
@@ -394,47 +450,53 @@ func file_playground_svc_v1_execution_internal_proto_rawDescGZIP() []byte {
 	return file_playground_svc_v1_execution_internal_proto_rawDescData
 }
 
-var file_playground_svc_v1_execution_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_playground_svc_v1_execution_internal_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_playground_svc_v1_execution_internal_proto_goTypes = []any{
 	(*RunRequest)(nil),              // 0: playground.svc.v1.RunRequest
 	(*ExecutionPolicy)(nil),         // 1: playground.svc.v1.ExecutionPolicy
 	(*CancelRequest)(nil),           // 2: playground.svc.v1.CancelRequest
 	(*GetExecutionRequest)(nil),     // 3: playground.svc.v1.GetExecutionRequest
 	(*FormatCodeRequest)(nil),       // 4: playground.svc.v1.FormatCodeRequest
-	(*CallContext)(nil),             // 5: playground.svc.v1.CallContext
-	(*v1.RunRequest)(nil),           // 6: playground.api.v1.RunRequest
-	(*v1.CancelRequest)(nil),        // 7: playground.api.v1.CancelRequest
-	(*v1.GetExecutionRequest)(nil),  // 8: playground.api.v1.GetExecutionRequest
-	(*v1.FormatCodeRequest)(nil),    // 9: playground.api.v1.FormatCodeRequest
-	(*v1.RunEvent)(nil),             // 10: playground.api.v1.RunEvent
-	(*v1.CancelResponse)(nil),       // 11: playground.api.v1.CancelResponse
-	(*v1.GetExecutionResponse)(nil), // 12: playground.api.v1.GetExecutionResponse
-	(*v1.FormatCodeResponse)(nil),   // 13: playground.api.v1.FormatCodeResponse
+	(*ResumeRunRequest)(nil),        // 5: playground.svc.v1.ResumeRunRequest
+	(*CallContext)(nil),             // 6: playground.svc.v1.CallContext
+	(*v1.RunRequest)(nil),           // 7: playground.api.v1.RunRequest
+	(*v1.CancelRequest)(nil),        // 8: playground.api.v1.CancelRequest
+	(*v1.GetExecutionRequest)(nil),  // 9: playground.api.v1.GetExecutionRequest
+	(*v1.FormatCodeRequest)(nil),    // 10: playground.api.v1.FormatCodeRequest
+	(*v1.ResumeRunRequest)(nil),     // 11: playground.api.v1.ResumeRunRequest
+	(*v1.RunEvent)(nil),             // 12: playground.api.v1.RunEvent
+	(*v1.CancelResponse)(nil),       // 13: playground.api.v1.CancelResponse
+	(*v1.GetExecutionResponse)(nil), // 14: playground.api.v1.GetExecutionResponse
+	(*v1.FormatCodeResponse)(nil),   // 15: playground.api.v1.FormatCodeResponse
 }
 var file_playground_svc_v1_execution_internal_proto_depIdxs = []int32{
-	5,  // 0: playground.svc.v1.RunRequest.context:type_name -> playground.svc.v1.CallContext
-	6,  // 1: playground.svc.v1.RunRequest.request:type_name -> playground.api.v1.RunRequest
+	6,  // 0: playground.svc.v1.RunRequest.context:type_name -> playground.svc.v1.CallContext
+	7,  // 1: playground.svc.v1.RunRequest.request:type_name -> playground.api.v1.RunRequest
 	1,  // 2: playground.svc.v1.RunRequest.policy:type_name -> playground.svc.v1.ExecutionPolicy
-	5,  // 3: playground.svc.v1.CancelRequest.context:type_name -> playground.svc.v1.CallContext
-	7,  // 4: playground.svc.v1.CancelRequest.request:type_name -> playground.api.v1.CancelRequest
-	5,  // 5: playground.svc.v1.GetExecutionRequest.context:type_name -> playground.svc.v1.CallContext
-	8,  // 6: playground.svc.v1.GetExecutionRequest.request:type_name -> playground.api.v1.GetExecutionRequest
-	5,  // 7: playground.svc.v1.FormatCodeRequest.context:type_name -> playground.svc.v1.CallContext
-	9,  // 8: playground.svc.v1.FormatCodeRequest.request:type_name -> playground.api.v1.FormatCodeRequest
+	6,  // 3: playground.svc.v1.CancelRequest.context:type_name -> playground.svc.v1.CallContext
+	8,  // 4: playground.svc.v1.CancelRequest.request:type_name -> playground.api.v1.CancelRequest
+	6,  // 5: playground.svc.v1.GetExecutionRequest.context:type_name -> playground.svc.v1.CallContext
+	9,  // 6: playground.svc.v1.GetExecutionRequest.request:type_name -> playground.api.v1.GetExecutionRequest
+	6,  // 7: playground.svc.v1.FormatCodeRequest.context:type_name -> playground.svc.v1.CallContext
+	10, // 8: playground.svc.v1.FormatCodeRequest.request:type_name -> playground.api.v1.FormatCodeRequest
 	1,  // 9: playground.svc.v1.FormatCodeRequest.policy:type_name -> playground.svc.v1.ExecutionPolicy
-	0,  // 10: playground.svc.v1.ExecutionInternalService.Run:input_type -> playground.svc.v1.RunRequest
-	2,  // 11: playground.svc.v1.ExecutionInternalService.Cancel:input_type -> playground.svc.v1.CancelRequest
-	3,  // 12: playground.svc.v1.ExecutionInternalService.GetExecution:input_type -> playground.svc.v1.GetExecutionRequest
-	4,  // 13: playground.svc.v1.ExecutionInternalService.FormatCode:input_type -> playground.svc.v1.FormatCodeRequest
-	10, // 14: playground.svc.v1.ExecutionInternalService.Run:output_type -> playground.api.v1.RunEvent
-	11, // 15: playground.svc.v1.ExecutionInternalService.Cancel:output_type -> playground.api.v1.CancelResponse
-	12, // 16: playground.svc.v1.ExecutionInternalService.GetExecution:output_type -> playground.api.v1.GetExecutionResponse
-	13, // 17: playground.svc.v1.ExecutionInternalService.FormatCode:output_type -> playground.api.v1.FormatCodeResponse
-	14, // [14:18] is the sub-list for method output_type
-	10, // [10:14] is the sub-list for method input_type
-	10, // [10:10] is the sub-list for extension type_name
-	10, // [10:10] is the sub-list for extension extendee
-	0,  // [0:10] is the sub-list for field type_name
+	6,  // 10: playground.svc.v1.ResumeRunRequest.context:type_name -> playground.svc.v1.CallContext
+	11, // 11: playground.svc.v1.ResumeRunRequest.request:type_name -> playground.api.v1.ResumeRunRequest
+	0,  // 12: playground.svc.v1.ExecutionInternalService.Run:input_type -> playground.svc.v1.RunRequest
+	2,  // 13: playground.svc.v1.ExecutionInternalService.Cancel:input_type -> playground.svc.v1.CancelRequest
+	3,  // 14: playground.svc.v1.ExecutionInternalService.GetExecution:input_type -> playground.svc.v1.GetExecutionRequest
+	5,  // 15: playground.svc.v1.ExecutionInternalService.ResumeRun:input_type -> playground.svc.v1.ResumeRunRequest
+	4,  // 16: playground.svc.v1.ExecutionInternalService.FormatCode:input_type -> playground.svc.v1.FormatCodeRequest
+	12, // 17: playground.svc.v1.ExecutionInternalService.Run:output_type -> playground.api.v1.RunEvent
+	13, // 18: playground.svc.v1.ExecutionInternalService.Cancel:output_type -> playground.api.v1.CancelResponse
+	14, // 19: playground.svc.v1.ExecutionInternalService.GetExecution:output_type -> playground.api.v1.GetExecutionResponse
+	12, // 20: playground.svc.v1.ExecutionInternalService.ResumeRun:output_type -> playground.api.v1.RunEvent
+	15, // 21: playground.svc.v1.ExecutionInternalService.FormatCode:output_type -> playground.api.v1.FormatCodeResponse
+	17, // [17:22] is the sub-list for method output_type
+	12, // [12:17] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_playground_svc_v1_execution_internal_proto_init() }
@@ -449,7 +511,7 @@ func file_playground_svc_v1_execution_internal_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_playground_svc_v1_execution_internal_proto_rawDesc), len(file_playground_svc_v1_execution_internal_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

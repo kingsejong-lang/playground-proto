@@ -314,6 +314,7 @@ type RunEvent struct {
 	//	*RunEvent_Truncated_
 	//	*RunEvent_Heartbeat_
 	//	*RunEvent_Finished_
+	//	*RunEvent_ReplayGap_
 	Event         isRunEvent_Event `protobuf_oneof:"event"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -442,6 +443,15 @@ func (x *RunEvent) GetFinished() *RunEvent_Finished {
 	return nil
 }
 
+func (x *RunEvent) GetReplayGap() *RunEvent_ReplayGap {
+	if x != nil {
+		if x, ok := x.Event.(*RunEvent_ReplayGap_); ok {
+			return x.ReplayGap
+		}
+	}
+	return nil
+}
+
 type isRunEvent_Event interface {
 	isRunEvent_Event()
 }
@@ -478,6 +488,10 @@ type RunEvent_Finished_ struct {
 	Finished *RunEvent_Finished `protobuf:"bytes,17,opt,name=finished,proto3,oneof"`
 }
 
+type RunEvent_ReplayGap_ struct {
+	ReplayGap *RunEvent_ReplayGap `protobuf:"bytes,18,opt,name=replay_gap,json=replayGap,proto3,oneof"`
+}
+
 func (*RunEvent_Accepted_) isRunEvent_Event() {}
 
 func (*RunEvent_Queued_) isRunEvent_Event() {}
@@ -493,6 +507,8 @@ func (*RunEvent_Truncated_) isRunEvent_Event() {}
 func (*RunEvent_Heartbeat_) isRunEvent_Event() {}
 
 func (*RunEvent_Finished_) isRunEvent_Event() {}
+
+func (*RunEvent_ReplayGap_) isRunEvent_Event() {}
 
 type ExecutionMetrics struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
@@ -803,6 +819,59 @@ func (x *GetExecutionResponse) GetFinishedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+type ResumeRunRequest struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	ExecutionId string                 `protobuf:"bytes,1,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	// Last seq the client received; 0 replays everything still buffered.
+	AfterSeq      uint64 `protobuf:"varint,2,opt,name=after_seq,json=afterSeq,proto3" json:"after_seq,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ResumeRunRequest) Reset() {
+	*x = ResumeRunRequest{}
+	mi := &file_playground_api_v1_execution_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ResumeRunRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ResumeRunRequest) ProtoMessage() {}
+
+func (x *ResumeRunRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_playground_api_v1_execution_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ResumeRunRequest.ProtoReflect.Descriptor instead.
+func (*ResumeRunRequest) Descriptor() ([]byte, []int) {
+	return file_playground_api_v1_execution_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *ResumeRunRequest) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *ResumeRunRequest) GetAfterSeq() uint64 {
+	if x != nil {
+		return x.AfterSeq
+	}
+	return 0
+}
+
 type RunEvent_Accepted struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Opaque, unguessable id (>=128 bits) bound to the caller.
@@ -815,7 +884,7 @@ type RunEvent_Accepted struct {
 
 func (x *RunEvent_Accepted) Reset() {
 	*x = RunEvent_Accepted{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[7]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -827,7 +896,7 @@ func (x *RunEvent_Accepted) String() string {
 func (*RunEvent_Accepted) ProtoMessage() {}
 
 func (x *RunEvent_Accepted) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[7]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -866,7 +935,7 @@ type RunEvent_Queued struct {
 
 func (x *RunEvent_Queued) Reset() {
 	*x = RunEvent_Queued{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[8]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -878,7 +947,7 @@ func (x *RunEvent_Queued) String() string {
 func (*RunEvent_Queued) ProtoMessage() {}
 
 func (x *RunEvent_Queued) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[8]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -911,7 +980,7 @@ type RunEvent_Started struct {
 
 func (x *RunEvent_Started) Reset() {
 	*x = RunEvent_Started{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[9]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -923,7 +992,7 @@ func (x *RunEvent_Started) String() string {
 func (*RunEvent_Started) ProtoMessage() {}
 
 func (x *RunEvent_Started) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[9]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -957,7 +1026,7 @@ type RunEvent_Output struct {
 
 func (x *RunEvent_Output) Reset() {
 	*x = RunEvent_Output{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[10]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -969,7 +1038,7 @@ func (x *RunEvent_Output) String() string {
 func (*RunEvent_Output) ProtoMessage() {}
 
 func (x *RunEvent_Output) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[10]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1010,7 +1079,7 @@ type RunEvent_Truncated struct {
 
 func (x *RunEvent_Truncated) Reset() {
 	*x = RunEvent_Truncated{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[11]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1022,7 +1091,7 @@ func (x *RunEvent_Truncated) String() string {
 func (*RunEvent_Truncated) ProtoMessage() {}
 
 func (x *RunEvent_Truncated) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[11]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1061,7 +1130,7 @@ type RunEvent_Heartbeat struct {
 
 func (x *RunEvent_Heartbeat) Reset() {
 	*x = RunEvent_Heartbeat{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[12]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1073,7 +1142,7 @@ func (x *RunEvent_Heartbeat) String() string {
 func (*RunEvent_Heartbeat) ProtoMessage() {}
 
 func (x *RunEvent_Heartbeat) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[12]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1087,6 +1156,52 @@ func (x *RunEvent_Heartbeat) ProtoReflect() protoreflect.Message {
 // Deprecated: Use RunEvent_Heartbeat.ProtoReflect.Descriptor instead.
 func (*RunEvent_Heartbeat) Descriptor() ([]byte, []int) {
 	return file_playground_api_v1_execution_proto_rawDescGZIP(), []int{1, 5}
+}
+
+// First event of a ResumeRun stream when events after after_seq were already
+// evicted from the buffer; replay continues at first_available_seq.
+type RunEvent_ReplayGap struct {
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	FirstAvailableSeq uint64                 `protobuf:"varint,1,opt,name=first_available_seq,json=firstAvailableSeq,proto3" json:"first_available_seq,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
+}
+
+func (x *RunEvent_ReplayGap) Reset() {
+	*x = RunEvent_ReplayGap{}
+	mi := &file_playground_api_v1_execution_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RunEvent_ReplayGap) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RunEvent_ReplayGap) ProtoMessage() {}
+
+func (x *RunEvent_ReplayGap) ProtoReflect() protoreflect.Message {
+	mi := &file_playground_api_v1_execution_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RunEvent_ReplayGap.ProtoReflect.Descriptor instead.
+func (*RunEvent_ReplayGap) Descriptor() ([]byte, []int) {
+	return file_playground_api_v1_execution_proto_rawDescGZIP(), []int{1, 6}
+}
+
+func (x *RunEvent_ReplayGap) GetFirstAvailableSeq() uint64 {
+	if x != nil {
+		return x.FirstAvailableSeq
+	}
+	return 0
 }
 
 type RunEvent_Finished struct {
@@ -1103,7 +1218,7 @@ type RunEvent_Finished struct {
 
 func (x *RunEvent_Finished) Reset() {
 	*x = RunEvent_Finished{}
-	mi := &file_playground_api_v1_execution_proto_msgTypes[13]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1115,7 +1230,7 @@ func (x *RunEvent_Finished) String() string {
 func (*RunEvent_Finished) ProtoMessage() {}
 
 func (x *RunEvent_Finished) ProtoReflect() protoreflect.Message {
-	mi := &file_playground_api_v1_execution_proto_msgTypes[13]
+	mi := &file_playground_api_v1_execution_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1128,7 +1243,7 @@ func (x *RunEvent_Finished) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunEvent_Finished.ProtoReflect.Descriptor instead.
 func (*RunEvent_Finished) Descriptor() ([]byte, []int) {
-	return file_playground_api_v1_execution_proto_rawDescGZIP(), []int{1, 6}
+	return file_playground_api_v1_execution_proto_rawDescGZIP(), []int{1, 7}
 }
 
 func (x *RunEvent_Finished) GetStatus() ExecutionStatus {
@@ -1175,8 +1290,7 @@ const file_playground_api_v1_execution_proto_rawDesc = "" +
 	"\x04args\x18\x05 \x03(\tB\x0f\xbaH\f\x92\x01\t\x10\x10\"\x05r\x03(\x80\x02R\x04args\x126\n" +
 	"\x12wall_time_limit_ms\x18\x06 \x01(\rB\t\xbaH\x06*\x04\x18\xe0\xd4\x03R\x0fwallTimeLimitMs\x12L\n" +
 	"\x11client_request_id\x18\a \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Za-z0-9_\\-]{8,64}$R\x0fclientRequestId:\xa5\x01\xbaH\xa1\x01\x1a\x9e\x01\n" +
-	"\x1drun_request.entry_file_exists\x12-entry_file must be one of the submitted files\x1aNthis.entry_file == '' || this.files.files.exists(f, f.path == this.entry_file)\"\xef\n" +
-	"\n" +
+	"\x1drun_request.entry_file_exists\x12-entry_file must be one of the submitted files\x1aNthis.entry_file == '' || this.files.files.exists(f, f.path == this.entry_file)\"\xf4\v\n" +
 	"\bRunEvent\x12\x10\n" +
 	"\x03seq\x18\x01 \x01(\x04R\x03seq\x12.\n" +
 	"\x04time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04time\x12B\n" +
@@ -1190,7 +1304,9 @@ const file_playground_api_v1_execution_proto_rawDesc = "" +
 	"diagnostic\x12E\n" +
 	"\ttruncated\x18\x0f \x01(\v2%.playground.api.v1.RunEvent.TruncatedH\x00R\ttruncated\x12E\n" +
 	"\theartbeat\x18\x10 \x01(\v2%.playground.api.v1.RunEvent.HeartbeatH\x00R\theartbeat\x12B\n" +
-	"\bfinished\x18\x11 \x01(\v2$.playground.api.v1.RunEvent.FinishedH\x00R\bfinished\x1ai\n" +
+	"\bfinished\x18\x11 \x01(\v2$.playground.api.v1.RunEvent.FinishedH\x00R\bfinished\x12F\n" +
+	"\n" +
+	"replay_gap\x18\x12 \x01(\v2%.playground.api.v1.RunEvent.ReplayGapH\x00R\treplayGap\x1ai\n" +
 	"\bAccepted\x12!\n" +
 	"\fexecution_id\x18\x01 \x01(\tR\vexecutionId\x12:\n" +
 	"\x06limits\x18\x02 \x01(\v2\".playground.api.v1.ExecutionLimitsR\x06limits\x1a$\n" +
@@ -1204,7 +1320,9 @@ const file_playground_api_v1_execution_proto_rawDesc = "" +
 	"\tTruncated\x12:\n" +
 	"\x06stream\x18\x01 \x01(\x0e2\".playground.api.v1.RunEvent.StreamR\x06stream\x12#\n" +
 	"\rdropped_bytes\x18\x02 \x01(\x04R\fdroppedBytes\x1a\v\n" +
-	"\tHeartbeat\x1a\xcf\x01\n" +
+	"\tHeartbeat\x1a;\n" +
+	"\tReplayGap\x12.\n" +
+	"\x13first_available_seq\x18\x01 \x01(\x04R\x11firstAvailableSeq\x1a\xcf\x01\n" +
 	"\bFinished\x12:\n" +
 	"\x06status\x18\x01 \x01(\x0e2\".playground.api.v1.ExecutionStatusR\x06status\x12 \n" +
 	"\texit_code\x18\x02 \x01(\x05H\x00R\bexitCode\x88\x01\x01\x12=\n" +
@@ -1247,7 +1365,10 @@ const file_playground_api_v1_execution_proto_rawDesc = "" +
 	"\vfinished_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"finishedAtB\f\n" +
 	"\n" +
-	"_exit_code*\x96\x03\n" +
+	"_exit_code\"r\n" +
+	"\x10ResumeRunRequest\x12A\n" +
+	"\fexecution_id\x18\x01 \x01(\tB\x1e\xbaH\x1br\x192\x17^[A-Za-z0-9_\\-]{22,64}$R\vexecutionId\x12\x1b\n" +
+	"\tafter_seq\x18\x02 \x01(\x04R\bafterSeq*\x96\x03\n" +
 	"\x0fExecutionStatus\x12 \n" +
 	"\x1cEXECUTION_STATUS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17EXECUTION_STATUS_QUEUED\x10\x01\x12\x1c\n" +
@@ -1260,11 +1381,12 @@ const file_playground_api_v1_execution_proto_rawDesc = "" +
 	"&EXECUTION_STATUS_OUTPUT_LIMIT_EXCEEDED\x10\b\x12\x1e\n" +
 	"\x1aEXECUTION_STATUS_CANCELLED\x10\t\x12#\n" +
 	"\x1fEXECUTION_STATUS_INTERNAL_ERROR\x10\n" +
-	"2\x8c\x02\n" +
+	"2\xe2\x02\n" +
 	"\x10ExecutionService\x12C\n" +
 	"\x03Run\x12\x1d.playground.api.v1.RunRequest\x1a\x1b.playground.api.v1.RunEvent0\x01\x12M\n" +
 	"\x06Cancel\x12 .playground.api.v1.CancelRequest\x1a!.playground.api.v1.CancelResponse\x12d\n" +
-	"\fGetExecution\x12&.playground.api.v1.GetExecutionRequest\x1a'.playground.api.v1.GetExecutionResponse\"\x03\x90\x02\x01B\xd9\x01\n" +
+	"\fGetExecution\x12&.playground.api.v1.GetExecutionRequest\x1a'.playground.api.v1.GetExecutionResponse\"\x03\x90\x02\x01\x12T\n" +
+	"\tResumeRun\x12#.playground.api.v1.ResumeRunRequest\x1a\x1b.playground.api.v1.RunEvent\"\x03\x90\x02\x010\x01B\xd9\x01\n" +
 	"\x15com.playground.api.v1B\x0eExecutionProtoP\x01ZJgithub.com/kingsejong-lang/playground-proto/gen/go/playground/api/v1;apiv1\xa2\x02\x03PAX\xaa\x02\x11Playground.Api.V1\xca\x02\x11Playground\\Api\\V1\xe2\x02\x1dPlayground\\Api\\V1\\GPBMetadata\xea\x02\x13Playground::Api::V1b\x06proto3"
 
 var (
@@ -1280,7 +1402,7 @@ func file_playground_api_v1_execution_proto_rawDescGZIP() []byte {
 }
 
 var file_playground_api_v1_execution_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_playground_api_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_playground_api_v1_execution_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
 var file_playground_api_v1_execution_proto_goTypes = []any{
 	(ExecutionStatus)(0),          // 0: playground.api.v1.ExecutionStatus
 	(RunEvent_Stream)(0),          // 1: playground.api.v1.RunEvent.Stream
@@ -1292,50 +1414,55 @@ var file_playground_api_v1_execution_proto_goTypes = []any{
 	(*CancelResponse)(nil),        // 7: playground.api.v1.CancelResponse
 	(*GetExecutionRequest)(nil),   // 8: playground.api.v1.GetExecutionRequest
 	(*GetExecutionResponse)(nil),  // 9: playground.api.v1.GetExecutionResponse
-	(*RunEvent_Accepted)(nil),     // 10: playground.api.v1.RunEvent.Accepted
-	(*RunEvent_Queued)(nil),       // 11: playground.api.v1.RunEvent.Queued
-	(*RunEvent_Started)(nil),      // 12: playground.api.v1.RunEvent.Started
-	(*RunEvent_Output)(nil),       // 13: playground.api.v1.RunEvent.Output
-	(*RunEvent_Truncated)(nil),    // 14: playground.api.v1.RunEvent.Truncated
-	(*RunEvent_Heartbeat)(nil),    // 15: playground.api.v1.RunEvent.Heartbeat
-	(*RunEvent_Finished)(nil),     // 16: playground.api.v1.RunEvent.Finished
-	(*Files)(nil),                 // 17: playground.api.v1.Files
-	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
-	(*Diagnostic)(nil),            // 19: playground.api.v1.Diagnostic
-	(*ExecutionLimits)(nil),       // 20: playground.api.v1.ExecutionLimits
+	(*ResumeRunRequest)(nil),      // 10: playground.api.v1.ResumeRunRequest
+	(*RunEvent_Accepted)(nil),     // 11: playground.api.v1.RunEvent.Accepted
+	(*RunEvent_Queued)(nil),       // 12: playground.api.v1.RunEvent.Queued
+	(*RunEvent_Started)(nil),      // 13: playground.api.v1.RunEvent.Started
+	(*RunEvent_Output)(nil),       // 14: playground.api.v1.RunEvent.Output
+	(*RunEvent_Truncated)(nil),    // 15: playground.api.v1.RunEvent.Truncated
+	(*RunEvent_Heartbeat)(nil),    // 16: playground.api.v1.RunEvent.Heartbeat
+	(*RunEvent_ReplayGap)(nil),    // 17: playground.api.v1.RunEvent.ReplayGap
+	(*RunEvent_Finished)(nil),     // 18: playground.api.v1.RunEvent.Finished
+	(*Files)(nil),                 // 19: playground.api.v1.Files
+	(*timestamppb.Timestamp)(nil), // 20: google.protobuf.Timestamp
+	(*Diagnostic)(nil),            // 21: playground.api.v1.Diagnostic
+	(*ExecutionLimits)(nil),       // 22: playground.api.v1.ExecutionLimits
 }
 var file_playground_api_v1_execution_proto_depIdxs = []int32{
-	17, // 0: playground.api.v1.RunRequest.files:type_name -> playground.api.v1.Files
-	18, // 1: playground.api.v1.RunEvent.time:type_name -> google.protobuf.Timestamp
-	10, // 2: playground.api.v1.RunEvent.accepted:type_name -> playground.api.v1.RunEvent.Accepted
-	11, // 3: playground.api.v1.RunEvent.queued:type_name -> playground.api.v1.RunEvent.Queued
-	12, // 4: playground.api.v1.RunEvent.started:type_name -> playground.api.v1.RunEvent.Started
-	13, // 5: playground.api.v1.RunEvent.output:type_name -> playground.api.v1.RunEvent.Output
-	19, // 6: playground.api.v1.RunEvent.diagnostic:type_name -> playground.api.v1.Diagnostic
-	14, // 7: playground.api.v1.RunEvent.truncated:type_name -> playground.api.v1.RunEvent.Truncated
-	15, // 8: playground.api.v1.RunEvent.heartbeat:type_name -> playground.api.v1.RunEvent.Heartbeat
-	16, // 9: playground.api.v1.RunEvent.finished:type_name -> playground.api.v1.RunEvent.Finished
-	0,  // 10: playground.api.v1.GetExecutionResponse.status:type_name -> playground.api.v1.ExecutionStatus
-	5,  // 11: playground.api.v1.GetExecutionResponse.metrics:type_name -> playground.api.v1.ExecutionMetrics
-	18, // 12: playground.api.v1.GetExecutionResponse.created_at:type_name -> google.protobuf.Timestamp
-	18, // 13: playground.api.v1.GetExecutionResponse.finished_at:type_name -> google.protobuf.Timestamp
-	20, // 14: playground.api.v1.RunEvent.Accepted.limits:type_name -> playground.api.v1.ExecutionLimits
-	2,  // 15: playground.api.v1.RunEvent.Started.phase:type_name -> playground.api.v1.RunEvent.Phase
-	1,  // 16: playground.api.v1.RunEvent.Output.stream:type_name -> playground.api.v1.RunEvent.Stream
-	1,  // 17: playground.api.v1.RunEvent.Truncated.stream:type_name -> playground.api.v1.RunEvent.Stream
-	0,  // 18: playground.api.v1.RunEvent.Finished.status:type_name -> playground.api.v1.ExecutionStatus
-	5,  // 19: playground.api.v1.RunEvent.Finished.metrics:type_name -> playground.api.v1.ExecutionMetrics
-	3,  // 20: playground.api.v1.ExecutionService.Run:input_type -> playground.api.v1.RunRequest
-	6,  // 21: playground.api.v1.ExecutionService.Cancel:input_type -> playground.api.v1.CancelRequest
-	8,  // 22: playground.api.v1.ExecutionService.GetExecution:input_type -> playground.api.v1.GetExecutionRequest
-	4,  // 23: playground.api.v1.ExecutionService.Run:output_type -> playground.api.v1.RunEvent
-	7,  // 24: playground.api.v1.ExecutionService.Cancel:output_type -> playground.api.v1.CancelResponse
-	9,  // 25: playground.api.v1.ExecutionService.GetExecution:output_type -> playground.api.v1.GetExecutionResponse
-	23, // [23:26] is the sub-list for method output_type
-	20, // [20:23] is the sub-list for method input_type
-	20, // [20:20] is the sub-list for extension type_name
-	20, // [20:20] is the sub-list for extension extendee
-	0,  // [0:20] is the sub-list for field type_name
+	19, // 0: playground.api.v1.RunRequest.files:type_name -> playground.api.v1.Files
+	20, // 1: playground.api.v1.RunEvent.time:type_name -> google.protobuf.Timestamp
+	11, // 2: playground.api.v1.RunEvent.accepted:type_name -> playground.api.v1.RunEvent.Accepted
+	12, // 3: playground.api.v1.RunEvent.queued:type_name -> playground.api.v1.RunEvent.Queued
+	13, // 4: playground.api.v1.RunEvent.started:type_name -> playground.api.v1.RunEvent.Started
+	14, // 5: playground.api.v1.RunEvent.output:type_name -> playground.api.v1.RunEvent.Output
+	21, // 6: playground.api.v1.RunEvent.diagnostic:type_name -> playground.api.v1.Diagnostic
+	15, // 7: playground.api.v1.RunEvent.truncated:type_name -> playground.api.v1.RunEvent.Truncated
+	16, // 8: playground.api.v1.RunEvent.heartbeat:type_name -> playground.api.v1.RunEvent.Heartbeat
+	18, // 9: playground.api.v1.RunEvent.finished:type_name -> playground.api.v1.RunEvent.Finished
+	17, // 10: playground.api.v1.RunEvent.replay_gap:type_name -> playground.api.v1.RunEvent.ReplayGap
+	0,  // 11: playground.api.v1.GetExecutionResponse.status:type_name -> playground.api.v1.ExecutionStatus
+	5,  // 12: playground.api.v1.GetExecutionResponse.metrics:type_name -> playground.api.v1.ExecutionMetrics
+	20, // 13: playground.api.v1.GetExecutionResponse.created_at:type_name -> google.protobuf.Timestamp
+	20, // 14: playground.api.v1.GetExecutionResponse.finished_at:type_name -> google.protobuf.Timestamp
+	22, // 15: playground.api.v1.RunEvent.Accepted.limits:type_name -> playground.api.v1.ExecutionLimits
+	2,  // 16: playground.api.v1.RunEvent.Started.phase:type_name -> playground.api.v1.RunEvent.Phase
+	1,  // 17: playground.api.v1.RunEvent.Output.stream:type_name -> playground.api.v1.RunEvent.Stream
+	1,  // 18: playground.api.v1.RunEvent.Truncated.stream:type_name -> playground.api.v1.RunEvent.Stream
+	0,  // 19: playground.api.v1.RunEvent.Finished.status:type_name -> playground.api.v1.ExecutionStatus
+	5,  // 20: playground.api.v1.RunEvent.Finished.metrics:type_name -> playground.api.v1.ExecutionMetrics
+	3,  // 21: playground.api.v1.ExecutionService.Run:input_type -> playground.api.v1.RunRequest
+	6,  // 22: playground.api.v1.ExecutionService.Cancel:input_type -> playground.api.v1.CancelRequest
+	8,  // 23: playground.api.v1.ExecutionService.GetExecution:input_type -> playground.api.v1.GetExecutionRequest
+	10, // 24: playground.api.v1.ExecutionService.ResumeRun:input_type -> playground.api.v1.ResumeRunRequest
+	4,  // 25: playground.api.v1.ExecutionService.Run:output_type -> playground.api.v1.RunEvent
+	7,  // 26: playground.api.v1.ExecutionService.Cancel:output_type -> playground.api.v1.CancelResponse
+	9,  // 27: playground.api.v1.ExecutionService.GetExecution:output_type -> playground.api.v1.GetExecutionResponse
+	4,  // 28: playground.api.v1.ExecutionService.ResumeRun:output_type -> playground.api.v1.RunEvent
+	25, // [25:29] is the sub-list for method output_type
+	21, // [21:25] is the sub-list for method input_type
+	21, // [21:21] is the sub-list for extension type_name
+	21, // [21:21] is the sub-list for extension extendee
+	0,  // [0:21] is the sub-list for field type_name
 }
 
 func init() { file_playground_api_v1_execution_proto_init() }
@@ -1354,16 +1481,17 @@ func file_playground_api_v1_execution_proto_init() {
 		(*RunEvent_Truncated_)(nil),
 		(*RunEvent_Heartbeat_)(nil),
 		(*RunEvent_Finished_)(nil),
+		(*RunEvent_ReplayGap_)(nil),
 	}
 	file_playground_api_v1_execution_proto_msgTypes[6].OneofWrappers = []any{}
-	file_playground_api_v1_execution_proto_msgTypes[13].OneofWrappers = []any{}
+	file_playground_api_v1_execution_proto_msgTypes[15].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_playground_api_v1_execution_proto_rawDesc), len(file_playground_api_v1_execution_proto_rawDesc)),
 			NumEnums:      3,
-			NumMessages:   14,
+			NumMessages:   16,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

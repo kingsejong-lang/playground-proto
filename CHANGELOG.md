@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 (2026-10-29)
+- `ExecutionService.ResumeRun` (and `ExecutionInternalService.ResumeRun`): reattach to a run after a
+  dropped stream; buffered events with `seq > after_seq` are replayed, then live events follow.
+- `RunEvent.ReplayGap` marks events that were evicted from the 1 MiB buffer.
+- `ErrorDetail.REASON_REPLAY_UNAVAILABLE` when nothing is buffered any more.
+- Backwards compatible with 0.3.0 (`buf breaking` passes).
+
 ## 0.3.0 (2026-10-29)
 - BREAKING (pre-release): `playground.internal.v1` renamed to `playground.svc.v1` (`proto/playground/svc/v1`,
   Go `gen/go/playground/svc/v1`, packages `svcv1`/`svcv1connect`). Go forbids importing paths

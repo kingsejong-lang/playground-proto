@@ -18,10 +18,17 @@ service ExecutionService {
   // Cancel stops a run owned by the caller (e.g. from another tab).
   rpc Cancel(CancelRequest) returns (CancelResponse);
   // GetExecution returns status and metrics of a run owned by the caller, for
-  // reconnecting after a dropped stream. Output is not replayed (v1 decision:
-  // keeps the execution service stateless about output; clients show a notice
-  // that output after the drop is unavailable).
+  // a quick status check. Use ResumeRun to receive the output again.
   rpc GetExecution(GetExecutionRequest) returns (GetExecutionResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
+  // ResumeRun reattaches to a run owned by the caller after a dropped Run
+  // stream. It replays buffered events with seq > after_seq and then continues
+  // with live events until Finished. The server keeps the last 1 MiB of events
+  // per run for 5 minutes after the run finishes. When older events are gone,
+  // the stream starts with a ReplayGap event. When nothing is buffered any more
+  // the call fails with FAILED_PRECONDITION and ErrorDetail.REASON_REPLAY_UNAVAILABLE.
+  rpc ResumeRun(ResumeRunRequest) returns (stream RunEvent) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
 }
@@ -68,6 +75,7 @@ message RunEvent {
     Truncated truncated = 15;
     Heartbeat heartbeat = 16;
     Finished finished = 17;
+    ReplayGap replay_gap = 18;
   }
 
   message Accepted {
@@ -95,6 +103,11 @@ message RunEvent {
   }
   // Sent every 10 s without output so proxies keep the stream open.
   message Heartbeat {}
+  // First event of a ResumeRun stream when events after after_seq were already
+  // evicted from the buffer; replay continues at first_available_seq.
+  message ReplayGap {
+    uint64 first_available_seq = 1;
+  }
   message Finished {
     ExecutionStatus status = 1;
     // Process exit code when the program ran to completion; unset otherwise.
@@ -164,4 +177,10 @@ message GetExecutionResponse {
   ExecutionMetrics metrics = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp finished_at = 7;
+}
+
+message ResumeRunRequest {
+  string execution_id = 1 [(buf.validate.field).string.pattern = "^[A-Za-z0-9_\\-]{22,64}$"];
+  // Last seq the client received; 0 replays everything still buffered.
+  uint64 after_seq = 2;
 }

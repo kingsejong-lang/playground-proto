@@ -34,6 +34,9 @@ const (
 	// ExecutionInternalServiceGetExecutionProcedure is the procedure name of the
 	// ExecutionInternalService's GetExecution RPC.
 	ExecutionInternalServiceGetExecutionProcedure = "/playground.svc.v1.ExecutionInternalService/GetExecution"
+	// ExecutionInternalServiceResumeRunProcedure is the procedure name of the
+	// ExecutionInternalService's ResumeRun RPC.
+	ExecutionInternalServiceResumeRunProcedure = "/playground.svc.v1.ExecutionInternalService/ResumeRun"
 	// ExecutionInternalServiceFormatCodeProcedure is the procedure name of the
 	// ExecutionInternalService's FormatCode RPC.
 	ExecutionInternalServiceFormatCodeProcedure = "/playground.svc.v1.ExecutionInternalService/FormatCode"
@@ -61,6 +64,13 @@ var (
 			Procedure:  ExecutionInternalServiceGetExecutionProcedure,
 		}
 	})
+	executionInternalServiceResumeRunSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeServer,
+			Schema:     v1.File_playground_svc_v1_execution_internal_proto.Services().ByName("ExecutionInternalService").Methods().ByName("ResumeRun"),
+			Procedure:  ExecutionInternalServiceResumeRunProcedure,
+		}
+	})
 	executionInternalServiceFormatCodeSpec = sync.OnceValue(func() connect.Spec {
 		return connect.Spec{
 			StreamType: connect.StreamTypeUnary,
@@ -76,6 +86,7 @@ type ExecutionInternalServiceClient interface {
 	Run(context.Context, *v1.RunRequest) (ExecutionInternalServiceRunClientStream, error)
 	Cancel(context.Context, *v1.CancelRequest) (*v11.CancelResponse, error)
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v11.GetExecutionResponse, error)
+	ResumeRun(context.Context, *v1.ResumeRunRequest) (ExecutionInternalServiceResumeRunClientStream, error)
 	// FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
 	FormatCode(context.Context, *v1.FormatCodeRequest) (*v11.FormatCodeResponse, error)
 }
@@ -108,12 +119,34 @@ func (s ExecutionInternalServiceRunClientStream) Close() error {
 	return s.stream.Close()
 }
 
+// ExecutionInternalServiceResumeRunClientStream is the client stream for the
+// ExecutionInternalService's ResumeRun RPC.
+type ExecutionInternalServiceResumeRunClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s ExecutionInternalServiceResumeRunClientStream) Receive() (*v11.RunEvent, error) {
+	var res v11.RunEvent
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s ExecutionInternalServiceResumeRunClientStream) Close() error {
+	return s.stream.Close()
+}
+
 // ExecutionInternalServiceHandler is an implementation of the
 // playground.svc.v1.ExecutionInternalService service.
 type ExecutionInternalServiceHandler interface {
 	Run(context.Context, *v1.RunRequest, ExecutionInternalServiceRunServerStream) error
 	Cancel(context.Context, *v1.CancelRequest) (*v11.CancelResponse, error)
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v11.GetExecutionResponse, error)
+	ResumeRun(context.Context, *v1.ResumeRunRequest, ExecutionInternalServiceResumeRunServerStream) error
 	// FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
 	FormatCode(context.Context, *v1.FormatCodeRequest) (*v11.FormatCodeResponse, error)
 }
@@ -126,6 +159,7 @@ func RegisterExecutionInternalServiceHandler(server *connect.Server, svc Executi
 		connect.Method{Spec: executionInternalServiceRunSpec(), Handler: adapter.run},
 		connect.Method{Spec: executionInternalServiceCancelSpec(), Handler: adapter.cancel},
 		connect.Method{Spec: executionInternalServiceGetExecutionSpec(), Handler: adapter.getExecution},
+		connect.Method{Spec: executionInternalServiceResumeRunSpec(), Handler: adapter.resumeRun},
 		connect.Method{Spec: executionInternalServiceFormatCodeSpec(), Handler: adapter.formatCode},
 	)
 }
@@ -146,6 +180,22 @@ func (s ExecutionInternalServiceRunServerStream) Send(res *v11.RunEvent) error {
 	return s.stream.Send(res)
 }
 
+// ExecutionInternalServiceResumeRunServerStream is the server stream for the
+// ExecutionInternalService's ResumeRun RPC.
+type ExecutionInternalServiceResumeRunServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s ExecutionInternalServiceResumeRunServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s ExecutionInternalServiceResumeRunServerStream) Send(res *v11.RunEvent) error {
+	return s.stream.Send(res)
+}
+
 // UnimplementedExecutionInternalServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedExecutionInternalServiceHandler struct{}
 
@@ -159,6 +209,10 @@ func (UnimplementedExecutionInternalServiceHandler) Cancel(context.Context, *v1.
 
 func (UnimplementedExecutionInternalServiceHandler) GetExecution(context.Context, *v1.GetExecutionRequest) (*v11.GetExecutionResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "playground.svc.v1.ExecutionInternalService.GetExecution is not implemented")
+}
+
+func (UnimplementedExecutionInternalServiceHandler) ResumeRun(context.Context, *v1.ResumeRunRequest, ExecutionInternalServiceResumeRunServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "playground.svc.v1.ExecutionInternalService.ResumeRun is not implemented")
 }
 
 func (UnimplementedExecutionInternalServiceHandler) FormatCode(context.Context, *v1.FormatCodeRequest) (*v11.FormatCodeResponse, error) {
@@ -191,6 +245,14 @@ func (c *executionInternalServiceClient) GetExecution(ctx context.Context, req *
 		return nil, err
 	}
 	return &res, nil
+}
+
+func (c *executionInternalServiceClient) ResumeRun(ctx context.Context, req *v1.ResumeRunRequest) (ExecutionInternalServiceResumeRunClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, executionInternalServiceResumeRunSpec(), req)
+	if err != nil {
+		return ExecutionInternalServiceResumeRunClientStream{}, err
+	}
+	return ExecutionInternalServiceResumeRunClientStream{stream: stream}, nil
 }
 
 func (c *executionInternalServiceClient) FormatCode(ctx context.Context, req *v1.FormatCodeRequest) (*v11.FormatCodeResponse, error) {
@@ -235,6 +297,14 @@ func (h executionInternalServiceHandler) getExecution(ctx context.Context, _ con
 		return err
 	}
 	return stream.Send(res)
+}
+
+func (h executionInternalServiceHandler) resumeRun(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResumeRunRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.ResumeRun(ctx, &req, ExecutionInternalServiceResumeRunServerStream{stream: stream})
 }
 
 func (h executionInternalServiceHandler) formatCode(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {

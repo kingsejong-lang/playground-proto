@@ -14,7 +14,7 @@ Status: Accepted (2026-10-29). Contract files: `proto/playground/api/v1` (public
 | `POST /api/v1/execute`, `ExecutionService.Execute` | — removed | single path: streaming `Run` |
 | `POST /api/v1/execute/stream` (SSE), WS `execute`, `ExecuteStream` | `ExecutionService.Run` (server stream) | typed events with `seq` |
 | `POST /api/v1/execute/:id/cancel`, WS `cancel` | `ExecutionService.Cancel` (+ aborting the stream) | owner-checked |
-| `GET /api/v1/execute/:id/status` (mock) | `ExecutionService.GetExecution` | real state, owner-checked |
+| `GET /api/v1/execute/:id/status` (mock) | `ExecutionService.GetExecution`, `ResumeRun` | real state and output replay, owner-checked |
 | `POST/GET/DELETE /api/v1/share` | `ShareService.CreateShare/GetShare/DeleteShare` | delete token for anonymous |
 | `GET /p/:id`, `GET /download/:id` | frontend route + `GetShare` | download built client-side |
 | `POST/GET /api/v1/settings` | `SettingsService.GetSettings/UpdateSettings` | field mask |
@@ -45,6 +45,11 @@ client                          gateway                         execution
 * Client abort (fetch `AbortSignal`) cancels the gateway context, which cancels the internal stream,
   which kills the container. `Cancel` exists for other tabs/devices.
 * `client_request_id` makes retries idempotent for 60 s.
+* After a dropped stream the client calls `ResumeRun(execution_id, after_seq = last received seq)`.
+  The execution service appends every event of a run to a Redis stream capped at 1 MiB, kept until
+  5 minutes after `Finished`. Replay sends buffered events with `seq > after_seq` (preceded by
+  `ReplayGap` when some were evicted) and then live events until `Finished`; the client
+  de-duplicates by `seq`. Nothing buffered ⇒ `FAILED_PRECONDITION` + `REASON_REPLAY_UNAVAILABLE`.
 * `Output.data` is bytes; the frontend uses a streaming `TextDecoder` per stream.
 
 ## 3. Versioning and compatibility

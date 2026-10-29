@@ -31,6 +31,8 @@ const (
 	// ExecutionServiceGetExecutionProcedure is the procedure name of the ExecutionService's
 	// GetExecution RPC.
 	ExecutionServiceGetExecutionProcedure = "/playground.api.v1.ExecutionService/GetExecution"
+	// ExecutionServiceResumeRunProcedure is the procedure name of the ExecutionService's ResumeRun RPC.
+	ExecutionServiceResumeRunProcedure = "/playground.api.v1.ExecutionService/ResumeRun"
 )
 
 var (
@@ -56,6 +58,14 @@ var (
 			IdempotencyLevel: connect.IdempotencyNoSideEffects,
 		}
 	})
+	executionServiceResumeRunSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType:       connect.StreamTypeServer,
+			Schema:           v1.File_playground_api_v1_execution_proto.Services().ByName("ExecutionService").Methods().ByName("ResumeRun"),
+			Procedure:        ExecutionServiceResumeRunProcedure,
+			IdempotencyLevel: connect.IdempotencyNoSideEffects,
+		}
+	})
 )
 
 // ExecutionServiceClient is a client for the playground.api.v1.ExecutionService service.
@@ -64,10 +74,15 @@ type ExecutionServiceClient interface {
 	// Cancel stops a run owned by the caller (e.g. from another tab).
 	Cancel(context.Context, *v1.CancelRequest) (*v1.CancelResponse, error)
 	// GetExecution returns status and metrics of a run owned by the caller, for
-	// reconnecting after a dropped stream. Output is not replayed (v1 decision:
-	// keeps the execution service stateless about output; clients show a notice
-	// that output after the drop is unavailable).
+	// a quick status check. Use ResumeRun to receive the output again.
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error)
+	// ResumeRun reattaches to a run owned by the caller after a dropped Run
+	// stream. It replays buffered events with seq > after_seq and then continues
+	// with live events until Finished. The server keeps the last 1 MiB of events
+	// per run for 5 minutes after the run finishes. When older events are gone,
+	// the stream starts with a ReplayGap event. When nothing is buffered any more
+	// the call fails with FAILED_PRECONDITION and ErrorDetail.REASON_REPLAY_UNAVAILABLE.
+	ResumeRun(context.Context, *v1.ResumeRunRequest) (ExecutionServiceResumeRunClientStream, error)
 }
 
 // NewExecutionServiceClient constructs a client for the playground.api.v1.ExecutionService service.
@@ -96,16 +111,42 @@ func (s ExecutionServiceRunClientStream) Close() error {
 	return s.stream.Close()
 }
 
+// ExecutionServiceResumeRunClientStream is the client stream for the ExecutionService's ResumeRun
+// RPC.
+type ExecutionServiceResumeRunClientStream struct {
+	stream connect.ClientStream
+}
+
+// Receive returns the next response message from the server.
+func (s ExecutionServiceResumeRunClientStream) Receive() (*v1.RunEvent, error) {
+	var res v1.RunEvent
+	if err := s.stream.Receive(&res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// Close releases the stream's resources. It is idempotent and is typically deferred to clean up a
+// stream abandoned before io.EOF.
+func (s ExecutionServiceResumeRunClientStream) Close() error {
+	return s.stream.Close()
+}
+
 // ExecutionServiceHandler is an implementation of the playground.api.v1.ExecutionService service.
 type ExecutionServiceHandler interface {
 	Run(context.Context, *v1.RunRequest, ExecutionServiceRunServerStream) error
 	// Cancel stops a run owned by the caller (e.g. from another tab).
 	Cancel(context.Context, *v1.CancelRequest) (*v1.CancelResponse, error)
 	// GetExecution returns status and metrics of a run owned by the caller, for
-	// reconnecting after a dropped stream. Output is not replayed (v1 decision:
-	// keeps the execution service stateless about output; clients show a notice
-	// that output after the drop is unavailable).
+	// a quick status check. Use ResumeRun to receive the output again.
 	GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error)
+	// ResumeRun reattaches to a run owned by the caller after a dropped Run
+	// stream. It replays buffered events with seq > after_seq and then continues
+	// with live events until Finished. The server keeps the last 1 MiB of events
+	// per run for 5 minutes after the run finishes. When older events are gone,
+	// the stream starts with a ReplayGap event. When nothing is buffered any more
+	// the call fails with FAILED_PRECONDITION and ErrorDetail.REASON_REPLAY_UNAVAILABLE.
+	ResumeRun(context.Context, *v1.ResumeRunRequest, ExecutionServiceResumeRunServerStream) error
 }
 
 // RegisterExecutionServiceHandler registers svc as the playground.api.v1.ExecutionService
@@ -116,6 +157,7 @@ func RegisterExecutionServiceHandler(server *connect.Server, svc ExecutionServic
 		connect.Method{Spec: executionServiceRunSpec(), Handler: adapter.run},
 		connect.Method{Spec: executionServiceCancelSpec(), Handler: adapter.cancel},
 		connect.Method{Spec: executionServiceGetExecutionSpec(), Handler: adapter.getExecution},
+		connect.Method{Spec: executionServiceResumeRunSpec(), Handler: adapter.resumeRun},
 	)
 }
 
@@ -134,6 +176,22 @@ func (s ExecutionServiceRunServerStream) Send(res *v1.RunEvent) error {
 	return s.stream.Send(res)
 }
 
+// ExecutionServiceResumeRunServerStream is the server stream for the ExecutionService's ResumeRun
+// RPC.
+type ExecutionServiceResumeRunServerStream struct {
+	stream connect.ServerStream
+}
+
+// SendHeaders flushes the response headers without a message. The first Send does this implicitly.
+func (s ExecutionServiceResumeRunServerStream) SendHeaders() error {
+	return s.stream.SendHeaders()
+}
+
+// Send sends a response message to the client.
+func (s ExecutionServiceResumeRunServerStream) Send(res *v1.RunEvent) error {
+	return s.stream.Send(res)
+}
+
 // UnimplementedExecutionServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedExecutionServiceHandler struct{}
 
@@ -147,6 +205,10 @@ func (UnimplementedExecutionServiceHandler) Cancel(context.Context, *v1.CancelRe
 
 func (UnimplementedExecutionServiceHandler) GetExecution(context.Context, *v1.GetExecutionRequest) (*v1.GetExecutionResponse, error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, "playground.api.v1.ExecutionService.GetExecution is not implemented")
+}
+
+func (UnimplementedExecutionServiceHandler) ResumeRun(context.Context, *v1.ResumeRunRequest, ExecutionServiceResumeRunServerStream) error {
+	return connect.NewError(connect.CodeUnimplemented, "playground.api.v1.ExecutionService.ResumeRun is not implemented")
 }
 
 type executionServiceClient struct {
@@ -175,6 +237,14 @@ func (c *executionServiceClient) GetExecution(ctx context.Context, req *v1.GetEx
 		return nil, err
 	}
 	return &res, nil
+}
+
+func (c *executionServiceClient) ResumeRun(ctx context.Context, req *v1.ResumeRunRequest) (ExecutionServiceResumeRunClientStream, error) {
+	stream, err := c.client.CallServerStream(ctx, executionServiceResumeRunSpec(), req)
+	if err != nil {
+		return ExecutionServiceResumeRunClientStream{}, err
+	}
+	return ExecutionServiceResumeRunClientStream{stream: stream}, nil
 }
 
 type executionServiceHandler struct{ svc ExecutionServiceHandler }
@@ -209,4 +279,12 @@ func (h executionServiceHandler) getExecution(ctx context.Context, _ connect.Spe
 		return err
 	}
 	return stream.Send(res)
+}
+
+func (h executionServiceHandler) resumeRun(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResumeRunRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	return h.svc.ResumeRun(ctx, &req, ExecutionServiceResumeRunServerStream{stream: stream})
 }

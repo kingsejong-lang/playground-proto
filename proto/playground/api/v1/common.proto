@@ -73,5 +73,7 @@ message ErrorDetail {
     REASON_PAYLOAD_TOO_LARGE = 9;
     REASON_ORIGIN_REJECTED = 10;
     REASON_INTERNAL = 11;
+    // ResumeRun: the run's buffered events have expired or never existed.
+    REASON_REPLAY_UNAVAILABLE = 12;
   }
 }

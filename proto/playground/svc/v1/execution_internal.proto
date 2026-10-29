@@ -13,6 +13,7 @@ service ExecutionInternalService {
   rpc Run(RunRequest) returns (stream playground.api.v1.RunEvent);
   rpc Cancel(CancelRequest) returns (playground.api.v1.CancelResponse);
   rpc GetExecution(GetExecutionRequest) returns (playground.api.v1.GetExecutionResponse);
+  rpc ResumeRun(ResumeRunRequest) returns (stream playground.api.v1.RunEvent);
   // FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
   rpc FormatCode(FormatCodeRequest) returns (playground.api.v1.FormatCodeResponse);
 }
@@ -62,4 +63,9 @@ message FormatCodeRequest {
   CallContext context = 1 [(buf.validate.field).required = true];
   playground.api.v1.FormatCodeRequest request = 2 [(buf.validate.field).required = true];
   ExecutionPolicy policy = 3 [(buf.validate.field).required = true];
+}
+
+message ResumeRunRequest {
+  CallContext context = 1 [(buf.validate.field).required = true];
+  playground.api.v1.ResumeRunRequest request = 2 [(buf.validate.field).required = true];
 }
