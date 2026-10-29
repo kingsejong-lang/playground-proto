@@ -44,6 +44,8 @@ func TestRunRequestRules(t *testing.T) {
 		{"wall time too high", &apiv1.RunRequest{LanguageId: "kingsejong", Files: files("main.ksj"), WallTimeLimitMs: 60001}, false},
 		{"file too big", &apiv1.RunRequest{LanguageId: "kingsejong", Files: &apiv1.Files{Files: []*apiv1.SourceFile{{Path: "main.ksj", Content: strings.Repeat("a", 65537)}}}}, false},
 		{"bad execution id", &apiv1.CancelRequest{ExecutionId: "short"}, false},
+		{"resume ok", &apiv1.ResumeRunRequest{ExecutionId: "01HZX3K9Q2V7M5T8R4W6Y1B0CD", AfterSeq: 42}, true},
+		{"resume bad id", &apiv1.ResumeRunRequest{ExecutionId: "../../x"}, false},
 		{"share title too long", &apiv1.CreateShareRequest{LanguageId: "kingsejong", Files: files("main.ksj"), Title: strings.Repeat("가", 121)}, false},
 		{"settings font too big", &apiv1.UpdateSettingsRequest{Settings: &apiv1.Settings{FontSize: 99, TabSize: 4}}, false},
 		{"bad email", &apiv1.RegisterRequest{Email: "not-an-email", Password: "0123456789", DisplayName: "a"}, false},

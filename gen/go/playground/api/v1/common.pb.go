@@ -90,6 +90,8 @@ const (
 	ErrorDetail_REASON_PAYLOAD_TOO_LARGE    ErrorDetail_Reason = 9
 	ErrorDetail_REASON_ORIGIN_REJECTED      ErrorDetail_Reason = 10
 	ErrorDetail_REASON_INTERNAL             ErrorDetail_Reason = 11
+	// ResumeRun: the run's buffered events have expired or never existed.
+	ErrorDetail_REASON_REPLAY_UNAVAILABLE ErrorDetail_Reason = 12
 )
 
 // Enum value maps for ErrorDetail_Reason.
@@ -107,6 +109,7 @@ var (
 		9:  "REASON_PAYLOAD_TOO_LARGE",
 		10: "REASON_ORIGIN_REJECTED",
 		11: "REASON_INTERNAL",
+		12: "REASON_REPLAY_UNAVAILABLE",
 	}
 	ErrorDetail_Reason_value = map[string]int32{
 		"REASON_UNSPECIFIED":          0,
@@ -121,6 +124,7 @@ var (
 		"REASON_PAYLOAD_TOO_LARGE":    9,
 		"REASON_ORIGIN_REJECTED":      10,
 		"REASON_INTERNAL":             11,
+		"REASON_REPLAY_UNAVAILABLE":   12,
 	}
 )
 
@@ -333,11 +337,11 @@ const file_playground_api_v1_common_proto_rawDesc = "" +
 	"\x05Files\x12?\n" +
 	"\x05files\x18\x01 \x03(\v2\x1d.playground.api.v1.SourceFileB\n" +
 	"\xbaH\a\x92\x01\x04\b\x01\x10\x10R\x05files:X\xbaHU\x1aS\n" +
-	"\x12files.unique_paths\x12\x19file paths must be unique\x1a\"this.files.map(f, f.path).unique()\"\xd2\x03\n" +
+	"\x12files.unique_paths\x12\x19file paths must be unique\x1a\"this.files.map(f, f.path).unique()\"\xf1\x03\n" +
 	"\vErrorDetail\x12=\n" +
 	"\x06reason\x18\x01 \x01(\x0e2%.playground.api.v1.ErrorDetail.ReasonR\x06reason\x12\x14\n" +
 	"\x05field\x18\x02 \x01(\tR\x05field\x12.\n" +
-	"\x13retry_after_seconds\x18\x03 \x01(\rR\x11retryAfterSeconds\"\xbd\x02\n" +
+	"\x13retry_after_seconds\x18\x03 \x01(\rR\x11retryAfterSeconds\"\xdc\x02\n" +
 	"\x06Reason\x12\x16\n" +
 	"\x12REASON_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11REASON_VALIDATION\x10\x01\x12\x1a\n" +
@@ -351,7 +355,8 @@ const file_playground_api_v1_common_proto_rawDesc = "" +
 	"\x18REASON_PAYLOAD_TOO_LARGE\x10\t\x12\x1a\n" +
 	"\x16REASON_ORIGIN_REJECTED\x10\n" +
 	"\x12\x13\n" +
-	"\x0fREASON_INTERNAL\x10\v*Q\n" +
+	"\x0fREASON_INTERNAL\x10\v\x12\x1d\n" +
+	"\x19REASON_REPLAY_UNAVAILABLE\x10\f*Q\n" +
 	"\x05Theme\x12\x15\n" +
 	"\x11THEME_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fTHEME_SYSTEM\x10\x01\x12\x0f\n" +

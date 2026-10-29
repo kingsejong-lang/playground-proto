@@ -23,6 +23,7 @@ const (
 	ExecutionInternalService_Run_FullMethodName          = "/playground.svc.v1.ExecutionInternalService/Run"
 	ExecutionInternalService_Cancel_FullMethodName       = "/playground.svc.v1.ExecutionInternalService/Cancel"
 	ExecutionInternalService_GetExecution_FullMethodName = "/playground.svc.v1.ExecutionInternalService/GetExecution"
+	ExecutionInternalService_ResumeRun_FullMethodName    = "/playground.svc.v1.ExecutionInternalService/ResumeRun"
 	ExecutionInternalService_FormatCode_FullMethodName   = "/playground.svc.v1.ExecutionInternalService/FormatCode"
 )
 
@@ -36,6 +37,7 @@ type ExecutionInternalServiceClient interface {
 	Run(ctx context.Context, in *RunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RunEvent], error)
 	Cancel(ctx context.Context, in *CancelRequest, opts ...grpc.CallOption) (*v1.CancelResponse, error)
 	GetExecution(ctx context.Context, in *GetExecutionRequest, opts ...grpc.CallOption) (*v1.GetExecutionResponse, error)
+	ResumeRun(ctx context.Context, in *ResumeRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RunEvent], error)
 	// FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
 	FormatCode(ctx context.Context, in *FormatCodeRequest, opts ...grpc.CallOption) (*v1.FormatCodeResponse, error)
 }
@@ -87,6 +89,25 @@ func (c *executionInternalServiceClient) GetExecution(ctx context.Context, in *G
 	return out, nil
 }
 
+func (c *executionInternalServiceClient) ResumeRun(ctx context.Context, in *ResumeRunRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.RunEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ExecutionInternalService_ServiceDesc.Streams[1], ExecutionInternalService_ResumeRun_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[ResumeRunRequest, v1.RunEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ExecutionInternalService_ResumeRunClient = grpc.ServerStreamingClient[v1.RunEvent]
+
 func (c *executionInternalServiceClient) FormatCode(ctx context.Context, in *FormatCodeRequest, opts ...grpc.CallOption) (*v1.FormatCodeResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.FormatCodeResponse)
@@ -107,6 +128,7 @@ type ExecutionInternalServiceServer interface {
 	Run(*RunRequest, grpc.ServerStreamingServer[v1.RunEvent]) error
 	Cancel(context.Context, *CancelRequest) (*v1.CancelResponse, error)
 	GetExecution(context.Context, *GetExecutionRequest) (*v1.GetExecutionResponse, error)
+	ResumeRun(*ResumeRunRequest, grpc.ServerStreamingServer[v1.RunEvent]) error
 	// FormatCode runs the language formatter (RuntimeSpec.format_argv) in a sandbox.
 	FormatCode(context.Context, *FormatCodeRequest) (*v1.FormatCodeResponse, error)
 	mustEmbedUnimplementedExecutionInternalServiceServer()
@@ -127,6 +149,9 @@ func (UnimplementedExecutionInternalServiceServer) Cancel(context.Context, *Canc
 }
 func (UnimplementedExecutionInternalServiceServer) GetExecution(context.Context, *GetExecutionRequest) (*v1.GetExecutionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetExecution not implemented")
+}
+func (UnimplementedExecutionInternalServiceServer) ResumeRun(*ResumeRunRequest, grpc.ServerStreamingServer[v1.RunEvent]) error {
+	return status.Error(codes.Unimplemented, "method ResumeRun not implemented")
 }
 func (UnimplementedExecutionInternalServiceServer) FormatCode(context.Context, *FormatCodeRequest) (*v1.FormatCodeResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method FormatCode not implemented")
@@ -200,6 +225,17 @@ func _ExecutionInternalService_GetExecution_Handler(srv interface{}, ctx context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ExecutionInternalService_ResumeRun_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ResumeRunRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ExecutionInternalServiceServer).ResumeRun(m, &grpc.GenericServerStream[ResumeRunRequest, v1.RunEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ExecutionInternalService_ResumeRunServer = grpc.ServerStreamingServer[v1.RunEvent]
+
 func _ExecutionInternalService_FormatCode_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FormatCodeRequest)
 	if err := dec(in); err != nil {
@@ -242,6 +278,11 @@ var ExecutionInternalService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Run",
 			Handler:       _ExecutionInternalService_Run_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "ResumeRun",
+			Handler:       _ExecutionInternalService_ResumeRun_Handler,
 			ServerStreams: true,
 		},
 	},

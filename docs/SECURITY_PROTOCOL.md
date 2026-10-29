@@ -54,7 +54,7 @@ Every public request passes these layers in order. A layer rejects with the list
 | L5 Rate & concurrency | token buckets in Redis keyed by principal **and** by client IP /64 (IPv6) or /32 | anonymous: 10 runs/min, 1 concurrent run, 60 other calls/min; user: 30 runs/min, 2 concurrent; auth RPCs: 5/min/IP. Redis unavailable ⇒ **fail closed** for `Run`, fail open (local bucket) for read-only RPCs | `ResourceExhausted` / `RATE_LIMITED`, `CONCURRENCY_LIMIT` (+ `retry_after_seconds`) |
 | L6 Validation | `connectrpc.com/validate` server interceptor (protovalidate rules in these protos) + `go/limits.CheckFiles` | field rules in `proto/playground/api/v1/*.proto`; total source ≤ 256 KiB | `InvalidArgument` / `VALIDATION` (+ `field`) |
 | L7 Admission | bounded global run queue in execution service | queue ≤ 2 × worker count; full ⇒ reject immediately (no unbounded waiting). Per-stream: max duration = policy wall time + 45 s (up to 30 s queue wait after `Accepted` + 15 s slack), output capped at `max_output_bytes`, heartbeat every 10 s, server closes idle streams after 30 s without client read progress | `Unavailable` / `OVERLOADED` |
-| L8 Authorization | in the owning service, using `CallContext.principal` | share delete/settings/cancel/get-execution require owner match; anonymous share delete requires a constant-time-compared delete token | `PermissionDenied` / `NOT_FOUND` (do not reveal existence) |
+| L8 Authorization | in the owning service, using `CallContext.principal` | share delete/settings/cancel/get-execution/resume-run require owner match; anonymous share delete requires a constant-time-compared delete token | `PermissionDenied` / `NOT_FOUND` (do not reveal existence) |
 | L9 Sandbox | see §5 | — | reported as `ExecutionStatus` in `Finished`, not as RPC errors |
 
 Errors returned to the browser contain only a safe message and `ErrorDetail`; internal error text,
@@ -120,7 +120,10 @@ boundary is authoritative.
 7. Images are pinned by digest; the execution service does not pull at request time.
 8. The execution service is the only holder of the container-runtime socket and runs on nodes that
    host nothing else. The gateway cannot reach the runtime socket.
-9. Result caching keyed by source is **removed** for runs (it returned another user's output for the
+9. The replay buffer for `ResumeRun` is keyed by `execution_id`, capped at 1 MiB per run, expires 5
+   minutes after the run finishes, and is readable only by the run's owner. It counts toward the
+   anonymous/user call limits (L5) like other read RPCs.
+10. Result caching keyed by source is **removed** for runs (it returned another user's output for the
    same input and hid nondeterminism). Formatting results may be cached.
 
 ## 6. Abuse and availability

@@ -39,7 +39,7 @@ for await (const ev of client.run({ languageId: "kingsejong", files: { files: [{
 }
 ```
 Local development: `make ts-pack`, then in the frontend
-`npm install ../playground-proto/ts/kingsejong-lang-playground-proto-0.3.0.tgz`.
+`npm install ../playground-proto/ts/kingsejong-lang-playground-proto-0.4.0.tgz`.
 
 ## Develop / test
 
