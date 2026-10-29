@@ -55,8 +55,26 @@ Legend: **Status** `open` · `in progress` · `done`. **Needs** says what the it
 - Cancel and GetExecution worked only on the replica running the program (backend #9).
 - Outside development the language service could start with local-registry runtime images (backend #2).
 
-## Still open outside this list
+## Follow-up work after the list
 
-- Runtime images on ghcr.io: the manual `Runtime images` workflow has not been run yet, so no release digests exist.
-- Untested in a real cluster: Kubernetes with several nodes, Redis Cluster pub/sub, and gVisor with the KVM platform.
+Done:
 
+- Release runtime images are published to ghcr.io and pinned in the production overlay (backend #12, #16).
+- Service images are published to ghcr.io with the workflow token (backend #13).
+- Redis Cluster is supported and tested against a three-primary cluster (backend #14).
+- A multi-node kind cluster with a gVisor sandbox node, two gateway and two execution replicas, and Redis
+  Cluster passes the stack, cross-replica Cancel and ResumeRun tests (backend #17).
+- Alerts for Redis loss, dead execution replicas and failing buffers (backend #11).
+- The edge moved from ingress-nginx, whose upstream maintenance ended in March 2026, to Gateway API on
+  Envoy Gateway, with brotli, zstd and gzip compression (backend #21). The frontend can turn off its own
+  compression behind it with `NEXT_COMPRESS=false` (frontend #16).
+- Internal gRPC clients reconnect within seconds after an outage (backend #19).
+
+Still open:
+
+- GitHub Actions does not start jobs on the private backend repository because of an account billing
+  problem. Until it is fixed, backend pull requests are verified with the local equivalent of every CI job,
+  recorded in a "Local CI" comment on each pull request.
+- Deployment jobs stay skipped until a cluster exists and `KUBE_CONFIG_DEV` / `KUBE_CONFIG_PROD` are set.
+- Not yet tested: a certificate issued by cert-manager for the Gateway, a real load balancer address,
+  and gVisor with the KVM platform (only systrap was tested).
