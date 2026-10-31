@@ -88,12 +88,20 @@ boundary is authoritative.
 
 1. **One container per run, never reused.** Pre-warmed containers may be created ahead of time but
    are destroyed after a single run. No state crosses runs or tenants.
-2. Runtime class `runsc` (gVisor) required in production; startup fails if unavailable unless
-   `EXECUTION_ALLOW_RUNC=dev` is set.
+2. gVisor required in production. On Kubernetes every sandbox is a Pod with the gVisor RuntimeClass, and an
+   admission policy on the sandbox namespace rejects any other Pod (2a). With Docker (compose, developer
+   machines) runtime `runsc` is required; startup fails if unavailable unless `EXECUTION_ALLOW_RUNC=dev` is set.
+   * 2a. Sandbox-namespace admission (every creator, the execution service included): gVisor RuntimeClass, no
+     privileged container, no added capability, non-root, no host network/PID/IPC or host port, `emptyDir`
+     volumes only, no service account token, no init or ephemeral containers, images from the configured
+     registry pinned by digest; Pod Security `restricted`; default-deny NetworkPolicy; a Pod-count quota.
 3. `--network=none`, read-only root fs, `/workspace` tmpfs (`size` = `max_file_bytes`, `nosuid,nodev`),
-   `/tmp` tmpfs 16 MiB, `CapDrop ALL`, `no-new-privileges`, default seccomp profile, user
-   `65534:65534`, `PidsLimit = max_processes`, memory = swap = `memory_bytes`, `NanoCPUs` 1 CPU,
-   ulimits `cpu`, `fsize`, `nofile 256`, `nproc`.
+   `/tmp` tmpfs 16 MiB, `CapDrop ALL`, `no-new-privileges`, default seccomp profile, a uid:gid of its own
+   per run, `PidsLimit = max_processes`, memory = swap = `memory_bytes`, `NanoCPUs` 1 CPU,
+   ulimits `cpu`, `fsize`, `nofile 256`, `nproc`. On Kubernetes: gVisor networking off plus the
+   NetworkPolicy, `/workspace` and `/tmp` are memory-backed `emptyDir` with size limits (not `noexec`),
+   the rlimits are set by a static helper in the image before `execve`, and the node's `podPidsLimit` bounds
+   the host side.
 4. Commands are argv arrays from `RuntimeSpec` (no shell). Entry path is validated before substitution.
    KingSejong runs as `kingsejong --sandbox /workspace/<entry>` with cwd `/workspace`. Facts from the
    kingsejong-lang analysis (`docs/research/kingsejong-lang/analyses/05-design-insights.md`) that the
@@ -114,12 +122,15 @@ boundary is authoritative.
    * Info builtins (`현재_디렉토리`, `환경변수_읽기`, `사용자_이름`, `호스트_이름`) are unchecked ⇒ the
      container env must be empty except required variables and the hostname neutral (`sandbox`).
 5. Wall-clock timer in the executor kills the **container** (not just the exec) at `wall_time_ms`;
-   status `TIME_LIMIT_EXCEEDED`. OOM kill ⇒ `MEMORY_LIMIT_EXCEEDED`.
+   status `TIME_LIMIT_EXCEEDED`. OOM kill ⇒ `MEMORY_LIMIT_EXCEEDED`; under gVisor a Python run that exits 1
+   with `MemoryError` as the last stderr line is reported the same way.
 6. Output is read incrementally in ≤ 32 KiB chunks; after `max_output_bytes` the executor emits one
    `Truncated` event, stops forwarding, kills the container and finishes with `OUTPUT_LIMIT_EXCEEDED`.
 7. Images are pinned by digest; the execution service does not pull at request time.
-8. The execution service is the only holder of the container-runtime socket and runs on nodes that
-   host nothing else. The gateway cannot reach the runtime socket.
+8. On Kubernetes no component holds a container-runtime socket: the execution service may only create,
+   delete and exec into Pods in the sandbox namespace, and sandbox Pods run only on dedicated, tainted nodes
+   (RuntimeClass scheduling). With Docker the execution service is the only holder of the runtime socket and
+   runs on hosts that serve nothing else. The gateway reaches neither.
 9. The replay buffer for `ResumeRun` is keyed by `execution_id`, capped at 1 MiB per run, expires 5
    minutes after the run finishes, and is readable only by the run's owner. It counts toward the
    anonymous/user call limits (L5) like other read RPCs.
